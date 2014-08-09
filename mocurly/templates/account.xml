@@ -1,0 +1,89 @@
+<account href="{{ account.uris.object_uri }}">
+  <adjustments href="{{ account.uris.adjustments_uri }}"/>
+  <billing_info href="{{ account.uris.billing_info_uri }}"/>
+  <invoices href="{{ account.uris.invoices_uri }}"/>
+  <redemption href="{{ account.uris.redemption_uri }}"/>
+  <subscriptions href="{{ account.uris.subscriptions_uri }}"/>
+  <transactions href="{{ account.uris.transactions_uri }}"/>
+  <account_code>{{ account.account_code }}</account_code>
+  <state>{{ account.state }}</state>
+  {% if account.username %}
+    <username>{{ account.username }}</username>
+  {% else %}
+    <username nil="nil"></username>
+  {% endif %}
+  {% if account.email %}
+    <email>{{ account.email }}</email>
+  {% else %}
+    <email nil="nil"></email>
+  {% endif %}
+  {% if account.first_name %}
+    <first_name>{{ account.first_name }}</first_name>
+  {% else %}
+    <first_name nil="nil"></first_name>
+  {% endif %}
+  {% if account.last_name %}
+    <last_name>{{ account.last_name }}</last_name>
+  {% else %}
+    <last_name nil="nil"></last_name>
+  {% endif %}
+  {% if account.company_name %}
+    <company_name>{{ account.company_name }}</company_name>
+  {% else %}
+    <company_name nil="nil"></company_name>
+  {% endif %}
+  {% if account.vat_number %}
+    <vat_number>{{ account.vat_number }}</vat_number>
+  {% else %}
+    <vat_number nil="nil"></vat_number>
+  {% endif %}
+  {% if account.tax_exempt %}
+    <tax_exempt type="boolean">{{ account.tax_exempt }}</tax_exempt>
+  {% else %}
+    <tax_exempt nil="nil"></tax_exempt>
+  {% endif %}
+  <address>
+    {% if account.address.address1 %}
+      <address1>{{ account.address.address1 }}</address1>
+    {% else %}
+      <address1 nil="nil"></address1>
+    {% endif %}
+    {% if account.address.address2 %}
+      <address2>{{ account.address.address2 }}</address2>
+    {% else %}
+      <address2 nil="nil"></address2>
+    {% endif %}
+    {% if account.address.city %}
+      <city>{{ account.address.city }}</city>
+    {% else %}
+      <city nil="nil"></city>
+    {% endif %}
+    {% if account.address.state %}
+      <state>{{ account.address.state }}</state>
+    {% else %}
+      <state nil="nil"></state>
+    {% endif %}
+    {% if account.address.zip %}
+      <zip>{{ account.address.zip }}</zip>
+    {% else %}
+      <zip nil="nil"></zip>
+    {% endif %}
+    {% if account.address.country %}
+      <country>{{ account.addresscountry }}</country>
+    {% else %}
+      <country nil="nil"></country>
+    {% endif %}
+    {% if account.address.phone %}
+      <phone>{{ account.address.phone }}</phone>
+    {% else %}
+      <phone nil="nil"></phone>
+    {% endif %}
+  </address>
+  {% if account.accept_language %}
+    <accept_language>{{ account.accept_language }}</accept_language>
+  {% else %}
+    <accept_language nil="nil"></accept_language>
+  {% endif %}
+  <hosted_login_token>{{ account.hosted_login_token }}</hosted_login_token>
+  <created_at type="datetime">{{ account.created_at }}</created_at>
+</account>
