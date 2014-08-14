@@ -23,6 +23,9 @@ class BaseBackend(object):
     def delete_object(self, uuid):
         del self.datastore[uuid]
 
+    def clear_all(self):
+        self.datastore = {}
+
 class AccountBackend(BaseBackend):
     pass
 
@@ -43,7 +46,15 @@ class TransactionBackend(BaseBackend):
 
 accounts_backend = AccountBackend()
 billing_info_backend = BillingInfoBackend()
-invoices = InvoiceBackend()
-plans = SubscriptionPlanBackend()
-subscriptions = SubscriptionEnrollmentBackend()
-transactions = TransactionBackend()
+invoices_backend = InvoiceBackend()
+plans_backend = SubscriptionPlanBackend()
+subscriptions_backend = SubscriptionEnrollmentBackend()
+transactions_backend = TransactionBackend()
+
+def clear_backends():
+    accounts_backend.clear_all()
+    billing_info_backend.clear_all()
+    invoices_backend.clear_all()
+    plans_backend.clear_all()
+    subscriptions_backend.clear_all()
+    transactions_backend.clear_all()

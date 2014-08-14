@@ -116,7 +116,7 @@ def register():
             return 204, headers, ''
         HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=delete_callback)
 
-        # register extra views TODO
+        # register extra views
         for method in filter(lambda method: callable(method) and getattr(method, 'is_route', False), (getattr(endpoint, m) for m in dir(endpoint))):
             uri = detail_uri + '/' + method.uri
             uri_re = re.compile(uri)

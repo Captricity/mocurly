@@ -42,43 +42,47 @@
   {% else %}
     <tax_exempt nil="nil"></tax_exempt>
   {% endif %}
-  <address>
-    {% if account.address.address1 %}
-      <address1>{{ account.address.address1 }}</address1>
-    {% else %}
-      <address1 nil="nil"></address1>
-    {% endif %}
-    {% if account.address.address2 %}
-      <address2>{{ account.address.address2 }}</address2>
-    {% else %}
-      <address2 nil="nil"></address2>
-    {% endif %}
-    {% if account.address.city %}
-      <city>{{ account.address.city }}</city>
-    {% else %}
-      <city nil="nil"></city>
-    {% endif %}
-    {% if account.address.state %}
-      <state>{{ account.address.state }}</state>
-    {% else %}
-      <state nil="nil"></state>
-    {% endif %}
-    {% if account.address.zip %}
-      <zip>{{ account.address.zip }}</zip>
-    {% else %}
-      <zip nil="nil"></zip>
-    {% endif %}
-    {% if account.address.country %}
-      <country>{{ account.addresscountry }}</country>
-    {% else %}
-      <country nil="nil"></country>
-    {% endif %}
-    {% if account.address.phone %}
-      <phone>{{ account.address.phone }}</phone>
-    {% else %}
-      <phone nil="nil"></phone>
-    {% endif %}
-  </address>
+  {% if account.address %}
+      <address>
+        {% if account.address.address1 %}
+          <address1>{{ account.address.address1 }}</address1>
+        {% else %}
+          <address1 nil="nil"></address1>
+        {% endif %}
+        {% if account.address.address2 %}
+          <address2>{{ account.address.address2 }}</address2>
+        {% else %}
+          <address2 nil="nil"></address2>
+        {% endif %}
+        {% if account.address.city %}
+          <city>{{ account.address.city }}</city>
+        {% else %}
+          <city nil="nil"></city>
+        {% endif %}
+        {% if account.address.state %}
+          <state>{{ account.address.state }}</state>
+        {% else %}
+          <state nil="nil"></state>
+        {% endif %}
+        {% if account.address.zip %}
+          <zip>{{ account.address.zip }}</zip>
+        {% else %}
+          <zip nil="nil"></zip>
+        {% endif %}
+        {% if account.address.country %}
+          <country>{{ account.addresscountry }}</country>
+        {% else %}
+          <country nil="nil"></country>
+        {% endif %}
+        {% if account.address.phone %}
+          <phone>{{ account.address.phone }}</phone>
+        {% else %}
+          <phone nil="nil"></phone>
+        {% endif %}
+      </address>
+  {% else %}
+      <address nil="nil"></address>
+  {% endif %}
   {% if account.accept_language %}
     <accept_language>{{ account.accept_language }}</accept_language>
   {% else %}
