@@ -67,4 +67,28 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(new_transaction['status'], 'success')
 
     def test_transaction_refund(self):
-        raise NotImplementedError
+        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
+
+        self.base_transaction_data['uuid'] = '1234'
+        self.base_transaction_data['account'] = self.base_account_data['uuid']
+        self.base_transaction_data['test'] = True
+        self.base_transaction_data['voidable'] = True
+        self.base_transaction_data['refundable'] = True
+        self.base_transaction_data['tax_in_cents'] = 0
+        self.base_transaction_data['action'] = 'purchase'
+        self.base_transaction_data['status'] = 'success'
+        self.base_transaction_data['created_at'] = '2014-08-11'
+        mocurly.backend.transactions_backend.add_object(self.base_transaction_data)
+
+        transaction = recurly.Transaction.get('1234')
+        transaction.refund()
+
+        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
+        voided_transaction = mocurly.backend.transactions_backend.get_object('1234')
+        for k, v in self.base_transaction_data.iteritems():
+            if k in ['voidable', 'refundable']:
+                self.assertEqual(voided_transaction[k], False) # already refunded
+            elif k == 'status':
+                self.assertEqual(voided_transaction[k], 'void') # is now voided
+            else:
+                self.assertEqual(voided_transaction[k], v)
