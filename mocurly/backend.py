@@ -6,19 +6,19 @@ class BaseBackend(object):
         return uuid in self.datastore
 
     def add_object(self, obj):
-        self.datastore[obj['uuid']] = obj
+        self.datastore[obj['uuid']] = obj.copy()
         return obj
 
     def list_objects(self):
-        return self.datastore.values()
+        return [v.copy() for v in self.datastore.values()]
 
     def get_object(self, uuid):
-        return self.datastore[uuid]
+        return self.datastore[uuid].copy()
 
     def update_object(self, uuid, updated_data):
         obj = self.datastore[uuid]
         obj.update(updated_data)
-        return obj
+        return obj.copy()
 
     def delete_object(self, uuid):
         del self.datastore[uuid]

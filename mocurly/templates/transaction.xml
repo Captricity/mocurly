@@ -1,0 +1,49 @@
+<transaction href="{{ transaction.uris.object_uri }}" type="{{ transaction.type }}">
+    <account href="{{ transaction.uris.account_uri }}"/>
+    <invoice href="{{ transaction.uris.invoice_uri }}"/>
+    <subscription href="{{ transaction.uris.subscription_uri }}"/>
+    <uuid>{{ transaction.uuid }}</uuid>
+    <action>{{ transaction.action }}</action>
+    <amount_in_cents type="integer">{{ transaction.amount_in_cents }}</amount_in_cents>
+    <tax_in_cents type="integer">{{ transaction.tax_in_cents }}</tax_in_cents>
+    <currency>{{ transaction.currency }}</currency>
+    <status>{{ transaction.status }}</status>
+    <payment_method>{{ transaction.payment_method }}</payment_method>
+    {% if transaction.reference %}
+        <reference>{{ transaction.reference }}</reference>
+    {% else %}
+        <reference nil="nil"></reference>
+    {% endif %}
+    <source>{{ transaction.source }}</source>
+    <recurring type="boolean">{% if transaction.recurring %}true{% else %}false{% endif %}</recurring>
+    <test type="boolean">{% if transaction.test %}true{% else %}false{% endif %}</test>
+    <voidable type="boolean">{% if transaction.voidable %}true{% else %}false{% endif %}</voidable>
+    <refundable type="boolean">{% if transaction.refundable %}true{% else %}false{% endif %}</refundable>
+    {% if transaction.cvv_result %}
+        <cvv_result code="">{{ transaction.cvv_result }}</cvv_result>
+    {% else %}
+        <cvv_result code="" nil="nil"></cvv_result>
+    {% endif %}
+    {% if transaction.avs_result %}
+        <avs_result code="">{{ transaction.avs_result }}</avs_result>
+    {% else %}
+        <avs_result code="" nil="nil"></avs_result>
+    {% endif %}
+    {% if transaction.avs_result_street %}
+        <avs_result_street code="">{{ transaction.avs_result_street }}</avs_result_street>
+    {% else %}
+        <avs_result_street code="" nil="nil"></avs_result_street>
+    {% endif %}
+    {% if transaction.avs_result_postal %}
+        <avs_result_postal code="">{{ transaction.avs_result_postal }}</avs_result_postal>
+    {% else %}
+        <avs_result_postal code="" nil="nil"></avs_result_postal>
+    {% endif %}
+    <created_at type="datetime">{{ transaction.created_at }}</created_at>
+    <details>
+        {% with account=transaction.account %}
+            {% include 'account.xml' %}
+        {% endwith %}
+    </details>
+    <a name="refund" href="{{ transaction.uris.object_uri }}" method="delete" />
+  </transaction>

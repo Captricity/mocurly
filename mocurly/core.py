@@ -1,8 +1,12 @@
 import os
 import re
+import random
+import string
+import urlparse
 import xml.dom.minidom as minidom
 from httpretty import HTTPretty
-from jinja2 import Template
+from jinja2 import Environment, PackageLoader
+jinja2_env = Environment(loader=PackageLoader('mocurly', 'templates'), extensions=['jinja2.ext.with_'])
 
 PROJECT_DIR = os.path.dirname(__file__)
 
@@ -16,7 +20,7 @@ def details_route(method, uri):
 
 def serialize(template, object_type, object_dict):
     # Takes in the object type + dictionary representation and returns the XML
-    template = Template(open(os.path.join(PROJECT_DIR, template)).read())
+    template = jinja2_env.get_template(template)
     kwargs = {}
     kwargs[object_type] = object_dict
     return template.render(**kwargs)
@@ -48,6 +52,8 @@ def _deserialize_item(root):
     return object_type, obj
 
 class BaseRecurlyEndpoint(object):
+    pk_attr = 'uuid'
+
     def list(self):
         raise NotImplementedError
 
@@ -64,7 +70,10 @@ class BaseRecurlyEndpoint(object):
 
     def create(self, create_info):
         cls = self.__class__
-        create_info['uuid'] = create_info[cls.pk_attr]
+        if cls.pk_attr in create_info:
+            create_info['uuid'] = create_info[cls.pk_attr]
+        else:
+            create_info['uuid'] = self.generate_id()
         new_obj = cls.backend.add_object(create_info)
         return self.serialize(new_obj)
 
@@ -79,21 +88,24 @@ class BaseRecurlyEndpoint(object):
     def delete(self, pk):
         cls = self.__class__
         cls.backend.delete_object(pk)
+
+    def generate_id(self):
+        return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in xrange(32))
  
 BASE_URI = 'https://api.recurly.com/v2' # TODO
 def register():
-    from .endpoints import AccountsEndpoint
+    from .endpoints import AccountsEndpoint, TransactionsEndpoint
 
-    endpoints = [AccountsEndpoint()] # TODO
+    endpoints = [AccountsEndpoint(), TransactionsEndpoint()] # TODO
     for endpoint in endpoints:
         # register list views
         list_uri = BASE_URI + endpoint.base_uri
 
-        def list_callback(request, uri, headers):
+        def list_callback(request, uri, headers, endpoint=endpoint):
             return 200, headers, endpoint.list()
         HTTPretty.register_uri(HTTPretty.GET, list_uri, body=list_callback, content_type="application/xml")
 
-        def create_callback(request, uri, headers):
+        def create_callback(request, uri, headers, endpoint=endpoint):
             return 200, headers, endpoint.create(deserialize(request.parsed_body)[1])
         HTTPretty.register_uri(HTTPretty.POST, list_uri, body=create_callback, content_type="application/xml")
 
@@ -101,18 +113,20 @@ def register():
         detail_uri = BASE_URI + endpoint.base_uri + r'/([^/ ]+)'
         detail_uri_re = re.compile(detail_uri)
 
-        def retrieve_callback(request, uri, headers):
+        def retrieve_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
             pk = detail_uri_re.match(uri).group(1)
             return 200, headers, endpoint.retrieve(pk)
         HTTPretty.register_uri(HTTPretty.GET, detail_uri_re, body=retrieve_callback, content_type="application/xml")
 
-        def update_callback(request, uri, headers):
+        def update_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
             pk = detail_uri_re.match(uri).group(1)
             return 200, headers, endpoint.update(pk, deserialize(request.parsed_body)[1])
         HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=update_callback, content_type="application/xml")
 
-        def delete_callback(request, uri, headers):
-            pk = detail_uri_re.match(uri).group(1)
+        def delete_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
+            parsed_url = urlparse.urlparse(uri)
+            pk = detail_uri_re.match('{}://{}{}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
+            endpoint.delete(pk, **urlparse.parse_qs(parsed_url.query))
             return 204, headers, ''
         HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=delete_callback)
 
@@ -120,7 +134,7 @@ def register():
         for method in filter(lambda method: callable(method) and getattr(method, 'is_route', False), (getattr(endpoint, m) for m in dir(endpoint))):
             uri = detail_uri + '/' + method.uri
             uri_re = re.compile(uri)
-            def callback(request, uri, headers, method=method):
+            def callback(request, uri, headers, method=method, uri_re=uri_re):
                 pk = uri_re.match(uri).group(1)
                 if method.method == 'DELETE':
                     status = 204
