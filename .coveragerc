@@ -1,6 +1,7 @@
 [run]
 omit =
     *tests
+    mocurly/templates/*
 
 [report]
 exclude_lines =
