@@ -3,8 +3,8 @@ import recurly
 import re
 import random
 import string
-import urlparse
 import xml.dom.minidom as minidom
+from six.moves.urllib.parse import urlparse, parse_qs
 from httpretty import HTTPretty
 from jinja2 import Environment, PackageLoader
 jinja2_env = Environment(loader=PackageLoader('mocurly', 'templates'), extensions=['jinja2.ext.with_'])
@@ -98,7 +98,7 @@ class BaseRecurlyEndpoint(object):
         cls.backend.delete_object(pk)
 
     def generate_id(self):
-        return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in xrange(32))
+        return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(32))
  
 class mocurly(object):
     def __init__(self, func=None):
@@ -149,7 +149,7 @@ class mocurly(object):
             HTTPretty.register_uri(HTTPretty.GET, list_uri, body=list_callback, content_type="application/xml")
 
             def create_callback(request, uri, headers, endpoint=endpoint):
-                return 200, headers, endpoint.create(deserialize(request.parsed_body)[1])
+                return 200, headers, endpoint.create(deserialize(request.body)[1])
             HTTPretty.register_uri(HTTPretty.POST, list_uri, body=create_callback, content_type="application/xml")
 
             # register details views
@@ -163,13 +163,13 @@ class mocurly(object):
 
             def update_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
                 pk = detail_uri_re.match(uri).group(1)
-                return 200, headers, endpoint.update(pk, deserialize(request.parsed_body)[1])
+                return 200, headers, endpoint.update(pk, deserialize(request.body)[1])
             HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=update_callback, content_type="application/xml")
 
             def delete_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-                parsed_url = urlparse.urlparse(uri)
-                pk = detail_uri_re.match('{}://{}{}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
-                endpoint.delete(pk, **urlparse.parse_qs(parsed_url.query))
+                parsed_url = urlparse(uri)
+                pk = detail_uri_re.match('{0}://{1}{2}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
+                endpoint.delete(pk, **parse_qs(parsed_url.query))
                 return 204, headers, ''
             HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=delete_callback)
 
@@ -184,7 +184,7 @@ class mocurly(object):
                     else:
                         status = 200
                     if request.method in ['POST', 'PUT']:
-                        result = method(pk, deserialize(request.parsed_body)[1])
+                        result = method(pk, deserialize(request.body)[1])
                     else:
                         result = method(pk)
                     return status, headers, result

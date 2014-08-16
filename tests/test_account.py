@@ -41,10 +41,10 @@ class TestAccount(unittest.TestCase):
         # Verify account object exists in backend
         self.assertTrue(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
         new_account = mocurly.backend.accounts_backend.get_object(self.base_account_data['account_code'])
-        for k, v in self.base_account_data.iteritems():
+        for k, v in self.base_account_data.items():
             self.assertEqual(new_account[k], v)
-        self.assertIn('hosted_login_token', new_account) # adds a hosted_login_token by default
-        self.assertIn('created_at', new_account) # adds a created_at field by default
+        self.assertTrue('hosted_login_token' in new_account) # adds a hosted_login_token by default
+        self.assertTrue('created_at' in new_account) # adds a created_at field by default
 
     def test_account_creation_with_address(self):
         self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
@@ -56,15 +56,15 @@ class TestAccount(unittest.TestCase):
         # Verify account object exists in backend
         self.assertTrue(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
         new_account = mocurly.backend.accounts_backend.get_object(self.base_account_data['account_code'])
-        for k, v in self.base_account_data.iteritems():
+        for k, v in self.base_account_data.items():
             if k == 'address':
                 address = new_account[k]
-                for address_k, address_v in self.base_address_data.iteritems():
+                for address_k, address_v in self.base_address_data.items():
                     self.assertEqual(address[address_k], address_v)
             else:
                 self.assertEqual(new_account[k], v)
-        self.assertIn('hosted_login_token', new_account) # adds a hosted_login_token by default
-        self.assertIn('created_at', new_account) # adds a created_at field by default
+        self.assertTrue('hosted_login_token' in new_account) # adds a hosted_login_token by default
+        self.assertTrue('created_at' in new_account) # adds a created_at field by default
 
     def test_account_creation_with_billing_info(self):
         self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
@@ -78,15 +78,15 @@ class TestAccount(unittest.TestCase):
         # Verify account object exists in backend
         self.assertTrue(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
         new_account = mocurly.backend.accounts_backend.get_object(self.base_account_data['account_code'])
-        for k, v in self.base_account_data.iteritems():
+        for k, v in self.base_account_data.items():
             self.assertEqual(new_account[k], v)
-        self.assertIn('hosted_login_token', new_account) # adds a hosted_login_token by default
-        self.assertIn('created_at', new_account) # adds a created_at field by default
+        self.assertTrue('hosted_login_token' in new_account) # adds a hosted_login_token by default
+        self.assertTrue('created_at' in new_account) # adds a created_at field by default
 
         # Verify billing info object exists in backend
         self.assertTrue(mocurly.backend.billing_info_backend.has_object(self.base_account_data['account_code']))
         new_billing_info = mocurly.backend.billing_info_backend.get_object(self.base_account_data['account_code'])
-        for k, v in self.base_billing_info_data.iteritems():
+        for k, v in self.base_billing_info_data.items():
             self.assertEqual(new_billing_info[k], v)
 
     def test_simple_get_account(self):
@@ -95,7 +95,7 @@ class TestAccount(unittest.TestCase):
         mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
 
         account = recurly.Account.get(self.base_account_data['account_code'])
-        for k, v in self.base_account_data.iteritems():
+        for k, v in self.base_account_data.items():
             if k in ['uuid', 'uris']:
                 continue # skip
             if k == 'created_at':
@@ -110,7 +110,7 @@ class TestAccount(unittest.TestCase):
         mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
 
         account = recurly.Account.get(self.base_account_data['account_code'])
-        for k, v in self.base_account_data.iteritems():
+        for k, v in self.base_account_data.items():
             if k in ['uuid', 'uris']:
                 continue # skip
             if k == 'created_at':
@@ -118,7 +118,7 @@ class TestAccount(unittest.TestCase):
             elif k == 'address':
                 address = getattr(account, k)
                 self.assertEqual(type(address), recurly.Address)
-                for address_k, address_v in v.iteritems():
+                for address_k, address_v in v.items():
                     self.assertEqual(getattr(address, address_k), address_v)
             else:
                 self.assertEqual(getattr(account, k), v)
@@ -131,7 +131,7 @@ class TestAccount(unittest.TestCase):
         mocurly.backend.billing_info_backend.add_object(self.base_account_data['account_code'], self.base_billing_info_data)
 
         account = recurly.Account.get(self.base_account_data['account_code'])
-        for k, v in self.base_account_data.iteritems():
+        for k, v in self.base_account_data.items():
             if k in ['uuid', 'uris']:
                 continue # skip
             if k == 'created_at':
@@ -140,7 +140,7 @@ class TestAccount(unittest.TestCase):
                 self.assertEqual(getattr(account, k), v)
 
         billing_info = account.billing_info
-        for k, v in self.base_billing_info_data.iteritems():
+        for k, v in self.base_billing_info_data.items():
             if k in ['uuid', 'uris', 'account']:
                 continue # skip
             self.assertEqual(getattr(billing_info, k), v)

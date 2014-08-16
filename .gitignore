@@ -1,4 +1,9 @@
+# Test files
 test.py
-*/*.pyc
 .coverage
+.tox
+
+# Build files
+*/*.pyc
+*/__pycache__/*
 mocurly.egg-info

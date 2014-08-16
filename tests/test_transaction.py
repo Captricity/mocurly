@@ -55,12 +55,12 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
         self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 1)
         new_transaction_backed = mocurly.backend.transactions_backend.get_object(new_transaction.uuid)
-        for k, v in self.base_transaction_data.iteritems():
+        for k, v in self.base_transaction_data.items():
             if k == 'account':
                 self.assertEqual(new_transaction_backed[k], v.account_code)
             else:
                 self.assertEqual(new_transaction_backed[k], str(v))
-        self.assertIn('created_at', new_transaction_backed)
+        self.assertTrue('created_at' in new_transaction_backed)
         self.assertTrue(new_transaction_backed['test'])
         self.assertTrue(new_transaction_backed['voidable'])
         self.assertTrue(new_transaction_backed['refundable'])
@@ -100,7 +100,7 @@ class TestTransaction(unittest.TestCase):
 
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
         voided_transaction = mocurly.backend.transactions_backend.get_object('1234')
-        for k, v in self.base_transaction_data.iteritems():
+        for k, v in self.base_transaction_data.items():
             if k in ['voidable', 'refundable']:
                 self.assertEqual(voided_transaction[k], False) # already refunded
             elif k == 'status':

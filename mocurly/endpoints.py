@@ -1,5 +1,6 @@
 import datetime
 import recurly
+import six
 from .core import BaseRecurlyEndpoint, details_route, serialize
 from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend
 
@@ -70,10 +71,10 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
     template = 'transaction.xml'
 
     def hydrate_foreign_keys(self, obj):
-        if isinstance(obj['account'], basestring):
+        if isinstance(obj['account'], six.string_types):
             # hydrate account
             obj['account'] = AccountsEndpoint.backend.get_object(obj['account'])
-        if 'invoice' in obj and isinstance(obj['invoice'], basestring):
+        if 'invoice' in obj and isinstance(obj['invoice'], six.string_types):
             # hydrate invoice
             obj['invoice'] = InvoicesEndpoint.backend.get_object(obj['invoice'])
         return obj
@@ -158,11 +159,11 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
     template = 'invoice.xml'
 
     def hydrate_foreign_keys(self, obj):
-        if isinstance(obj['account'], basestring):
+        if isinstance(obj['account'], six.string_types):
             # hydrate account
             obj['account'] = AccountsEndpoint.backend.get_object(obj['account'])
         if 'transactions' in obj:
-            obj['transactions'] = [TransactionsEndpoint.backend.get_object(transaction_id) if isinstance(transaction_id, basestring) else transaction_id for transaction_id in obj['transactions']]
+            obj['transactions'] = [TransactionsEndpoint.backend.get_object(transaction_id) if isinstance(transaction_id, six.string_types) else transaction_id for transaction_id in obj['transactions']]
             for transaction in obj['transactions']:
                 transaction['invoice'] = obj
                 transaction['uris'] = TransactionsEndpoint().uris(transaction)
