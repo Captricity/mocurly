@@ -9,8 +9,8 @@ import mocurly.backend
 
 class TestAccount(unittest.TestCase):
     def setUp(self):
-        mocurly.core.register()
-        mocurly.core.HTTPretty.enable()
+        self.mocurly_ = mocurly.core.mocurly()
+        self.mocurly_.start()
 
         self.base_account_data = {
                 'account_code': 'blah',
@@ -30,7 +30,7 @@ class TestAccount(unittest.TestCase):
             }
 
     def tearDown(self):
-        mocurly.backend.clear_backends()
+        self.mocurly_.stop()
 
     def test_simple_account_creation(self):
         self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))

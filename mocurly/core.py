@@ -9,6 +9,8 @@ from httpretty import HTTPretty
 from jinja2 import Environment, PackageLoader
 jinja2_env = Environment(loader=PackageLoader('mocurly', 'templates'), extensions=['jinja2.ext.with_'])
 
+from .backend import clear_backends
+
 def details_route(method, uri):
     def details_route_decorator(func):
         func.is_route = True
@@ -98,59 +100,95 @@ class BaseRecurlyEndpoint(object):
     def generate_id(self):
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in xrange(32))
  
-def register():
-    from .endpoints import AccountsEndpoint, TransactionsEndpoint, InvoicesEndpoint
+class mocurly(object):
+    def __init__(self, func=None):
+        self.started = False
+        HTTPretty.reset()
 
-    endpoints = [AccountsEndpoint(), TransactionsEndpoint(), InvoicesEndpoint()] # TODO
-    for endpoint in endpoints:
-        # register list views
-        list_uri = recurly.base_uri() + endpoint.base_uri
+        self.func = func
 
-        def list_callback(request, uri, headers, endpoint=endpoint):
-            return 200, headers, endpoint.list()
-        HTTPretty.register_uri(HTTPretty.GET, list_uri, body=list_callback, content_type="application/xml")
+    def __call__(self, *args, **kwargs):
+        self.start()
+        try:
+            retval = self.func(*args, **kwargs)
+        finally:
+            self.stop()
+        return retval
 
-        def create_callback(request, uri, headers, endpoint=endpoint):
-            return 200, headers, endpoint.create(deserialize(request.parsed_body)[1])
-        HTTPretty.register_uri(HTTPretty.POST, list_uri, body=create_callback, content_type="application/xml")
+    def __enter__(self):
+        self.start()
 
-        # register details views
-        detail_uri = recurly.base_uri() + endpoint.base_uri + r'/([^/ ]+)'
-        detail_uri_re = re.compile(detail_uri)
+    def __exit__(self, type, value, tb):
+        self.stop()
 
-        def retrieve_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-            pk = detail_uri_re.match(uri).group(1)
-            return 200, headers, endpoint.retrieve(pk)
-        HTTPretty.register_uri(HTTPretty.GET, detail_uri_re, body=retrieve_callback, content_type="application/xml")
+    def start(self):
+        self.started = True
+        clear_backends()
 
-        def update_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-            pk = detail_uri_re.match(uri).group(1)
-            return 200, headers, endpoint.update(pk, deserialize(request.parsed_body)[1])
-        HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=update_callback, content_type="application/xml")
+        if not HTTPretty.is_enabled():
+            HTTPretty.enable()
 
-        def delete_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-            parsed_url = urlparse.urlparse(uri)
-            pk = detail_uri_re.match('{}://{}{}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
-            endpoint.delete(pk, **urlparse.parse_qs(parsed_url.query))
-            return 204, headers, ''
-        HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=delete_callback)
+        self._register()
 
-        # register extra views
-        for method in filter(lambda method: callable(method) and getattr(method, 'is_route', False), (getattr(endpoint, m) for m in dir(endpoint))):
-            uri = detail_uri + '/' + method.uri
-            uri_re = re.compile(uri)
-            def callback(request, uri, headers, method=method, uri_re=uri_re):
-                pk = uri_re.match(uri).group(1)
+    def stop(self):
+        if not self.started:
+            raise RunTimeError('Called stop() before start()')
+
+        HTTPretty.disable()
+
+    def _register(self):
+        from .endpoints import AccountsEndpoint, TransactionsEndpoint, InvoicesEndpoint
+
+        endpoints = [AccountsEndpoint(), TransactionsEndpoint(), InvoicesEndpoint()] # TODO
+        for endpoint in endpoints:
+            # register list views
+            list_uri = recurly.base_uri() + endpoint.base_uri
+
+            def list_callback(request, uri, headers, endpoint=endpoint):
+                return 200, headers, endpoint.list()
+            HTTPretty.register_uri(HTTPretty.GET, list_uri, body=list_callback, content_type="application/xml")
+
+            def create_callback(request, uri, headers, endpoint=endpoint):
+                return 200, headers, endpoint.create(deserialize(request.parsed_body)[1])
+            HTTPretty.register_uri(HTTPretty.POST, list_uri, body=create_callback, content_type="application/xml")
+
+            # register details views
+            detail_uri = recurly.base_uri() + endpoint.base_uri + r'/([^/ ]+)'
+            detail_uri_re = re.compile(detail_uri)
+
+            def retrieve_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
+                pk = detail_uri_re.match(uri).group(1)
+                return 200, headers, endpoint.retrieve(pk)
+            HTTPretty.register_uri(HTTPretty.GET, detail_uri_re, body=retrieve_callback, content_type="application/xml")
+
+            def update_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
+                pk = detail_uri_re.match(uri).group(1)
+                return 200, headers, endpoint.update(pk, deserialize(request.parsed_body)[1])
+            HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=update_callback, content_type="application/xml")
+
+            def delete_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
+                parsed_url = urlparse.urlparse(uri)
+                pk = detail_uri_re.match('{}://{}{}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
+                endpoint.delete(pk, **urlparse.parse_qs(parsed_url.query))
+                return 204, headers, ''
+            HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=delete_callback)
+
+            # register extra views
+            for method in filter(lambda method: callable(method) and getattr(method, 'is_route', False), (getattr(endpoint, m) for m in dir(endpoint))):
+                uri = detail_uri + '/' + method.uri
+                uri_re = re.compile(uri)
+                def callback(request, uri, headers, method=method, uri_re=uri_re):
+                    pk = uri_re.match(uri).group(1)
+                    if method.method == 'DELETE':
+                        status = 204
+                    else:
+                        status = 200
+                    if request.method in ['POST', 'PUT']:
+                        result = method(pk, deserialize(request.parsed_body)[1])
+                    else:
+                        result = method(pk)
+                    return status, headers, result
                 if method.method == 'DELETE':
-                    status = 204
+                    HTTPretty.register_uri(method.method, uri_re, body=callback)
                 else:
-                    status = 200
-                if request.method in ['POST', 'PUT']:
-                    result = method(pk, deserialize(request.parsed_body)[1])
-                else:
-                    result = method(pk)
-                return status, headers, result
-            if method.method == 'DELETE':
-                HTTPretty.register_uri(method.method, uri_re, body=callback)
-            else:
-                HTTPretty.register_uri(method.method, uri_re, body=callback, content_type="application/xml")
+                    HTTPretty.register_uri(method.method, uri_re, body=callback, content_type="application/xml")

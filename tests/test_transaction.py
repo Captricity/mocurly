@@ -9,8 +9,8 @@ import mocurly.backend
 
 class TestTransaction(unittest.TestCase):
     def setUp(self):
-        mocurly.core.register()
-        mocurly.core.HTTPretty.enable()
+        self.mocurly_ = mocurly.core.mocurly()
+        self.mocurly_.start()
 
         self.base_address_data = {
                 'address1': '123 Jackson St.',
@@ -42,7 +42,7 @@ class TestTransaction(unittest.TestCase):
             }
 
     def tearDown(self):
-        mocurly.backend.clear_backends()
+        self.mocurly_.stop()
 
     def test_simple_transaction_creation(self):
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
