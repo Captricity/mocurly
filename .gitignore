@@ -1,2 +1,4 @@
 test.py
 */*.pyc
+.coverage
+mocurly.egg-info
