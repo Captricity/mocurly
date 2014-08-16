@@ -1,0 +1,40 @@
+<invoice href="{{ invoice.uris.object_uri }}">
+    <account href="{{ invoice.uris.account_uri }}"/>
+    <subscription href="{{ invoice.uris.subscription_uri }}"/>
+    <uuid>{{ invoice.uuid }}</uuid>
+    <state>{{ invoice.state }}</state>
+    <invoice_number type="integer">{{ invoice.invoice_number }}</invoice_number>
+    {% if invoice.po_number %}
+        <po_number>{{ invoice.po_number }}</po_number>
+    {% else %}
+        <po_number nil="nil"></po_number>
+    {% endif %}
+    {% if invoice.vat_number %}
+        <vat_number>{{ invoice.vat_number }}</vat_number>
+    {% else %}
+        <vat_number nil="nil"></vat_number>
+    {% endif %}
+    <subtotal_in_cents type="integer">{{ invoice.subtotal_in_cents }}</subtotal_in_cents>
+    <tax_in_cents type="integer">{{ invoice.tax_in_cents }}</tax_in_cents>
+    <total_in_cents type="integer">{{ invoice.total_in_cents }}</total_in_cents>
+    <currency>{{ invoice.currency }}</currency>
+    <created_at type="datetime">{{ invoice.created_at }}</created_at>
+    {% if invoice.closed_at %}
+        <closed_at>{{ invoice.closed_at }}</closed_at>
+    {% else %}
+        <closed_at nil="nil"></closed_at>
+    {% endif %}
+    <tax_type>{{ invoice.tax_type }}</tax_type>
+    <tax_rate type="float">{{ invoice.tax_rate }}</tax_rate>
+    <net_terms type="integer">{{ invoice.net_terms }}</net_terms>
+    <collection_method>{{ invoice.collection_method }}</collection_method>
+    <redemption href="{{ invoice.uris.redemption_uri }}"/>
+    <line_items type="array">
+        <!-- TODO import adjustments -->
+    </line_items>
+    <transactions type="array">
+        {% for transaction in invoice.transactions %}
+            {% include 'transaction.xml' %}
+        {% endfor %}
+    </transactions>
+</invoice>

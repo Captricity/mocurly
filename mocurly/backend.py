@@ -2,11 +2,14 @@ class BaseBackend(object):
     def __init__(self):
         self.datastore = {}
 
+    def empty(self):
+        return not bool(self.datastore)
+
     def has_object(self, uuid):
         return uuid in self.datastore
 
-    def add_object(self, obj):
-        self.datastore[obj['uuid']] = obj.copy()
+    def add_object(self, uuid, obj):
+        self.datastore[uuid] = obj.copy()
         return obj
 
     def list_objects(self):

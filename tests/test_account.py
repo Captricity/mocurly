@@ -90,10 +90,9 @@ class TestAccount(unittest.TestCase):
             self.assertEqual(new_billing_info[k], v)
 
     def test_simple_get_account(self):
-        self.base_account_data['uuid'] = self.base_account_data['account_code']
         self.base_account_data['hosted_login_token'] = 'abcd1234'
         self.base_account_data['created_at'] = '2014-08-11'
-        mocurly.backend.accounts_backend.add_object(self.base_account_data)
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
 
         account = recurly.Account.get(self.base_account_data['account_code'])
         for k, v in self.base_account_data.iteritems():
@@ -105,11 +104,10 @@ class TestAccount(unittest.TestCase):
                 self.assertEqual(getattr(account, k), v)
 
     def test_address_get_account(self):
-        self.base_account_data['uuid'] = self.base_account_data['account_code']
         self.base_account_data['hosted_login_token'] = 'abcd1234'
         self.base_account_data['created_at'] = '2014-08-11'
         self.base_account_data['address'] = self.base_address_data
-        mocurly.backend.accounts_backend.add_object(self.base_account_data)
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
 
         account = recurly.Account.get(self.base_account_data['account_code'])
         for k, v in self.base_account_data.iteritems():
@@ -126,12 +124,11 @@ class TestAccount(unittest.TestCase):
                 self.assertEqual(getattr(account, k), v)
 
     def test_billing_info_get_account(self):
-        self.base_account_data['uuid'] = self.base_account_data['account_code']
         self.base_account_data['hosted_login_token'] = 'abcd1234'
         self.base_account_data['created_at'] = '2014-08-11'
-        mocurly.backend.accounts_backend.add_object(self.base_account_data)
-        self.base_billing_info_data['uuid'] = self.base_account_data['account_code']
-        mocurly.backend.billing_info_backend.add_object(self.base_billing_info_data)
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
+        self.base_billing_info_data['account'] = self.base_account_data['account_code']
+        mocurly.backend.billing_info_backend.add_object(self.base_account_data['account_code'], self.base_billing_info_data)
 
         account = recurly.Account.get(self.base_account_data['account_code'])
         for k, v in self.base_account_data.iteritems():
@@ -144,6 +141,6 @@ class TestAccount(unittest.TestCase):
 
         billing_info = account.billing_info
         for k, v in self.base_billing_info_data.iteritems():
-            if k in ['uuid', 'uris']:
+            if k in ['uuid', 'uris', 'account']:
                 continue # skip
             self.assertEqual(getattr(billing_info, k), v)

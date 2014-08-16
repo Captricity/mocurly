@@ -54,13 +54,17 @@ def _deserialize_item(root):
 class BaseRecurlyEndpoint(object):
     pk_attr = 'uuid'
 
-    def list(self):
-        raise NotImplementedError
+    def hydrate_foreign_keys(self, obj):
+        return obj
+
+    def get_object_uri(self, obj):
+        cls = self.__class__
+        return BASE_URI + cls.base_uri + '/' + obj[cls.pk_attr]
 
     def uris(self, obj):
-        cls = self.__class__
+        obj = self.hydrate_foreign_keys(obj)
         uri_out = {}
-        uri_out['object_uri'] = BASE_URI + cls.base_uri + '/' + obj[cls.pk_attr]
+        uri_out['object_uri'] = self.get_object_uri(obj)
         return uri_out
 
     def serialize(self, obj):
@@ -68,13 +72,16 @@ class BaseRecurlyEndpoint(object):
         obj['uris'] = self.uris(obj)
         return serialize(cls.template, cls.object_type, obj)
 
+    def list(self):
+        raise NotImplementedError
+
     def create(self, create_info):
         cls = self.__class__
         if cls.pk_attr in create_info:
             create_info['uuid'] = create_info[cls.pk_attr]
         else:
             create_info['uuid'] = self.generate_id()
-        new_obj = cls.backend.add_object(create_info)
+        new_obj = cls.backend.add_object(create_info['uuid'], create_info)
         return self.serialize(new_obj)
 
     def retrieve(self, pk):
@@ -94,9 +101,9 @@ class BaseRecurlyEndpoint(object):
  
 BASE_URI = 'https://api.recurly.com/v2' # TODO
 def register():
-    from .endpoints import AccountsEndpoint, TransactionsEndpoint
+    from .endpoints import AccountsEndpoint, TransactionsEndpoint, InvoicesEndpoint
 
-    endpoints = [AccountsEndpoint(), TransactionsEndpoint()] # TODO
+    endpoints = [AccountsEndpoint(), TransactionsEndpoint(), InvoicesEndpoint()] # TODO
     for endpoint in endpoints:
         # register list views
         list_uri = BASE_URI + endpoint.base_uri

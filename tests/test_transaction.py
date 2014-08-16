@@ -33,8 +33,8 @@ class TestTransaction(unittest.TestCase):
                 'hosted_login_token': 'abcd1234',
                 'created_at': '2014-08-11'
             }
-        mocurly.backend.accounts_backend.add_object(self.base_account_data)
-        mocurly.backend.billing_info_backend.add_object(self.base_billing_info_data)
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['uuid'], self.base_account_data)
+        mocurly.backend.billing_info_backend.add_object(self.base_billing_info_data['uuid'], self.base_billing_info_data)
 
         self.base_transaction_data = {
                 'amount_in_cents': 100,
@@ -46,25 +46,40 @@ class TestTransaction(unittest.TestCase):
 
     def test_simple_transaction_creation(self):
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
+        self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 0)
 
         self.base_transaction_data['account'] = recurly.Account(account_code=self.base_account_data['uuid'])
         new_transaction = recurly.Transaction(**self.base_transaction_data)
         new_transaction.save()
 
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
-        new_transaction = mocurly.backend.transactions_backend.get_object(new_transaction.uuid)
+        self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 1)
+        new_transaction_backed = mocurly.backend.transactions_backend.get_object(new_transaction.uuid)
         for k, v in self.base_transaction_data.iteritems():
             if k == 'account':
-                self.assertEqual(new_transaction[k], v.account_code)
+                self.assertEqual(new_transaction_backed[k], v.account_code)
             else:
-                self.assertEqual(new_transaction[k], str(v))
-        self.assertIn('created_at', new_transaction)
-        self.assertTrue(new_transaction['test'])
-        self.assertTrue(new_transaction['voidable'])
-        self.assertTrue(new_transaction['refundable'])
-        self.assertEqual(new_transaction['tax_in_cents'], 0)
-        self.assertEqual(new_transaction['action'], 'purchase')
-        self.assertEqual(new_transaction['status'], 'success')
+                self.assertEqual(new_transaction_backed[k], str(v))
+        self.assertIn('created_at', new_transaction_backed)
+        self.assertTrue(new_transaction_backed['test'])
+        self.assertTrue(new_transaction_backed['voidable'])
+        self.assertTrue(new_transaction_backed['refundable'])
+        self.assertEqual(new_transaction_backed['tax_in_cents'], 0)
+        self.assertEqual(new_transaction_backed['action'], 'purchase')
+        self.assertEqual(new_transaction_backed['status'], 'success')
+
+        new_invoice = new_transaction.invoice()
+        new_invoice_backed = mocurly.backend.invoices_backend.get_object(str(new_invoice.invoice_number))
+        self.assertEqual(len(new_invoice_backed['transactions']), 1)
+        self.assertEqual(new_invoice_backed['transactions'][0], new_transaction.uuid)
+        self.assertEqual(new_invoice_backed['state'], 'collected')
+        self.assertEqual(new_invoice_backed['subtotal_in_cents'], self.base_transaction_data['amount_in_cents'])
+        self.assertEqual(new_invoice_backed['total_in_cents'], self.base_transaction_data['amount_in_cents'])
+        self.assertEqual(new_invoice_backed['currency'], self.base_transaction_data['currency'])
+        self.assertEqual(new_invoice_backed['tax_in_cents'], 0)
+        self.assertEqual(new_invoice_backed['tax_type'], 'usst')
+        self.assertEqual(new_invoice_backed['tax_rate'], 0)
+        self.assertEqual(new_invoice_backed['net_terms'], 0)
 
     def test_transaction_refund(self):
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
@@ -78,7 +93,7 @@ class TestTransaction(unittest.TestCase):
         self.base_transaction_data['action'] = 'purchase'
         self.base_transaction_data['status'] = 'success'
         self.base_transaction_data['created_at'] = '2014-08-11'
-        mocurly.backend.transactions_backend.add_object(self.base_transaction_data)
+        mocurly.backend.transactions_backend.add_object('1234', self.base_transaction_data)
 
         transaction = recurly.Transaction.get('1234')
         transaction.refund()

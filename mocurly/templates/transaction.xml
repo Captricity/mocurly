@@ -1,6 +1,8 @@
 <transaction href="{{ transaction.uris.object_uri }}" type="{{ transaction.type }}">
     <account href="{{ transaction.uris.account_uri }}"/>
-    <invoice href="{{ transaction.uris.invoice_uri }}"/>
+    {% if transaction.uris.invoice_uri %}
+        <invoice href="{{ transaction.uris.invoice_uri }}"/>
+    {% endif %}
     <subscription href="{{ transaction.uris.subscription_uri }}"/>
     <uuid>{{ transaction.uuid }}</uuid>
     <action>{{ transaction.action }}</action>
@@ -46,4 +48,4 @@
         {% endwith %}
     </details>
     <a name="refund" href="{{ transaction.uris.object_uri }}" method="delete" />
-  </transaction>
+</transaction>
