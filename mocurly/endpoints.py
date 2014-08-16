@@ -1,9 +1,10 @@
 import datetime
-from .core import BaseRecurlyEndpoint, details_route, serialize, BASE_URI
+import recurly
+from .core import BaseRecurlyEndpoint, details_route, serialize
 from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend
 
 class AccountsEndpoint(BaseRecurlyEndpoint):
-    base_uri = '/accounts'
+    base_uri = 'accounts'
     pk_attr = 'account_code'
     backend = accounts_backend
     object_type = 'account'
@@ -42,7 +43,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
 
     def billing_info_uris(self, obj):
         uri_out = {}
-        uri_out['account_uri'] = BASE_URI + AccountsEndpoint.base_uri + '/' + obj['account']
+        uri_out['account_uri'] = recurly.base_uri() + AccountsEndpoint.base_uri + '/' + obj['account']
         uri_out['object_uri'] = uri_out['account_uri'] + '/billing_info'
         return uri_out
 
@@ -63,7 +64,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         billing_info_backend.delete_object(pk)
 
 class TransactionsEndpoint(BaseRecurlyEndpoint):
-    base_uri = '/transactions'
+    base_uri = 'transactions'
     backend = transactions_backend
     object_type = 'transaction'
     template = 'transaction.xml'
@@ -150,7 +151,7 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
             pass
 
 class InvoicesEndpoint(BaseRecurlyEndpoint):
-    base_uri = '/invoices'
+    base_uri = 'invoices'
     backend = invoices_backend
     object_type = 'invoice'
     pk_attr = 'invoice_number'

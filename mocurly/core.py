@@ -1,4 +1,5 @@
 import os
+import recurly
 import re
 import random
 import string
@@ -7,8 +8,6 @@ import xml.dom.minidom as minidom
 from httpretty import HTTPretty
 from jinja2 import Environment, PackageLoader
 jinja2_env = Environment(loader=PackageLoader('mocurly', 'templates'), extensions=['jinja2.ext.with_'])
-
-PROJECT_DIR = os.path.dirname(__file__)
 
 def details_route(method, uri):
     def details_route_decorator(func):
@@ -59,7 +58,7 @@ class BaseRecurlyEndpoint(object):
 
     def get_object_uri(self, obj):
         cls = self.__class__
-        return BASE_URI + cls.base_uri + '/' + obj[cls.pk_attr]
+        return recurly.base_uri() + cls.base_uri + '/' + obj[cls.pk_attr]
 
     def uris(self, obj):
         obj = self.hydrate_foreign_keys(obj)
@@ -99,14 +98,13 @@ class BaseRecurlyEndpoint(object):
     def generate_id(self):
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in xrange(32))
  
-BASE_URI = 'https://api.recurly.com/v2' # TODO
 def register():
     from .endpoints import AccountsEndpoint, TransactionsEndpoint, InvoicesEndpoint
 
     endpoints = [AccountsEndpoint(), TransactionsEndpoint(), InvoicesEndpoint()] # TODO
     for endpoint in endpoints:
         # register list views
-        list_uri = BASE_URI + endpoint.base_uri
+        list_uri = recurly.base_uri() + endpoint.base_uri
 
         def list_callback(request, uri, headers, endpoint=endpoint):
             return 200, headers, endpoint.list()
@@ -117,7 +115,7 @@ def register():
         HTTPretty.register_uri(HTTPretty.POST, list_uri, body=create_callback, content_type="application/xml")
 
         # register details views
-        detail_uri = BASE_URI + endpoint.base_uri + r'/([^/ ]+)'
+        detail_uri = recurly.base_uri() + endpoint.base_uri + r'/([^/ ]+)'
         detail_uri_re = re.compile(detail_uri)
 
         def retrieve_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
