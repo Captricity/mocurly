@@ -1,8 +1,5 @@
-import os
 import recurly
 import re
-import random
-import string
 import xml.dom.minidom as minidom
 from six.moves.urllib.parse import urlparse, parse_qs
 from httpretty import HTTPretty
@@ -52,54 +49,6 @@ def _deserialize_item(root):
             obj[node.tagName] = child_object
     return object_type, obj
 
-class BaseRecurlyEndpoint(object):
-    pk_attr = 'uuid'
-
-    def hydrate_foreign_keys(self, obj):
-        return obj
-
-    def get_object_uri(self, obj):
-        cls = self.__class__
-        return recurly.base_uri() + cls.base_uri + '/' + obj[cls.pk_attr]
-
-    def uris(self, obj):
-        obj = self.hydrate_foreign_keys(obj)
-        uri_out = {}
-        uri_out['object_uri'] = self.get_object_uri(obj)
-        return uri_out
-
-    def serialize(self, obj):
-        cls = self.__class__
-        obj['uris'] = self.uris(obj)
-        return serialize(cls.template, cls.object_type, obj)
-
-    def list(self):
-        raise NotImplementedError
-
-    def create(self, create_info):
-        cls = self.__class__
-        if cls.pk_attr in create_info:
-            create_info['uuid'] = create_info[cls.pk_attr]
-        else:
-            create_info['uuid'] = self.generate_id()
-        new_obj = cls.backend.add_object(create_info['uuid'], create_info)
-        return self.serialize(new_obj)
-
-    def retrieve(self, pk):
-        cls = self.__class__
-        return self.serialize(cls.backend.get_object(pk))
-
-    def update(self, pk, update_info):
-        cls = self.__class__
-        return self.serialize(cls.backend.update_object(pk, update_info))
-
-    def delete(self, pk):
-        cls = self.__class__
-        cls.backend.delete_object(pk)
-
-    def generate_id(self):
-        return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(32))
- 
 class mocurly(object):
     def __init__(self, func=None):
         self.started = False
@@ -137,9 +86,9 @@ class mocurly(object):
         HTTPretty.disable()
 
     def _register(self):
-        from .endpoints import AccountsEndpoint, TransactionsEndpoint, InvoicesEndpoint
+        from .endpoints import AccountsEndpoint, TransactionsEndpoint, InvoicesEndpoint, PlansEndpoint
 
-        endpoints = [AccountsEndpoint(), TransactionsEndpoint(), InvoicesEndpoint()] # TODO
+        endpoints = [AccountsEndpoint(), TransactionsEndpoint(), InvoicesEndpoint(), PlansEndpoint()]
         for endpoint in endpoints:
             # register list views
             list_uri = recurly.base_uri() + endpoint.base_uri

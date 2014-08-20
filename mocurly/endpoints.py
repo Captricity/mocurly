@@ -1,8 +1,58 @@
 import datetime
 import recurly
 import six
-from .core import BaseRecurlyEndpoint, details_route, serialize
-from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend
+import random
+import string
+from .core import details_route, serialize
+from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend
+
+class BaseRecurlyEndpoint(object):
+    pk_attr = 'uuid'
+
+    def hydrate_foreign_keys(self, obj):
+        return obj
+
+    def get_object_uri(self, obj):
+        cls = self.__class__
+        return recurly.base_uri() + cls.base_uri + '/' + obj[cls.pk_attr]
+
+    def uris(self, obj):
+        obj = self.hydrate_foreign_keys(obj)
+        uri_out = {}
+        uri_out['object_uri'] = self.get_object_uri(obj)
+        return uri_out
+
+    def serialize(self, obj):
+        cls = self.__class__
+        obj['uris'] = self.uris(obj)
+        return serialize(cls.template, cls.object_type, obj)
+
+    def list(self):
+        raise NotImplementedError
+
+    def create(self, create_info):
+        cls = self.__class__
+        if cls.pk_attr in create_info:
+            create_info['uuid'] = create_info[cls.pk_attr]
+        else:
+            create_info['uuid'] = self.generate_id()
+        new_obj = cls.backend.add_object(create_info['uuid'], create_info)
+        return self.serialize(new_obj)
+
+    def retrieve(self, pk):
+        cls = self.__class__
+        return self.serialize(cls.backend.get_object(pk))
+
+    def update(self, pk, update_info):
+        cls = self.__class__
+        return self.serialize(cls.backend.update_object(pk, update_info))
+
+    def delete(self, pk):
+        cls = self.__class__
+        cls.backend.delete_object(pk)
+
+    def generate_id(self):
+        return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(32))
 
 class AccountsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'accounts'
@@ -181,3 +231,23 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
             return '1000'
         return str(max(int(invoice['invoice_number']) for invoice in InvoicesEndpoint.backend.list_objects()) + 1)
 
+class PlansEndpoint(BaseRecurlyEndpoint):
+    base_uri = 'plans'
+    backend = plans_backend
+    pk_attr = 'plan_code'
+    object_type = 'plan'
+    template = 'plan.xml'
+    defaults = {
+        'plan_interval_unit': 'months',
+        'plan_interval_length': 1,
+        'trial_interval_unit': 'months',
+        'trial_interval_length': 0,
+        'display_quantity': False,
+        'tax_exempt': False
+    }
+
+    def create(self, create_info):
+        create_info['created_at'] = datetime.datetime.now().isoformat()
+        defaults = PlansEndpoint.defaults.copy()
+        defaults.update(create_info)
+        return super(PlansEndpoint, self).create(defaults)
