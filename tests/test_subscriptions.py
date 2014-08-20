@@ -80,7 +80,7 @@ class TestSubscriptions(unittest.TestCase):
         new_plan_backed = mocurly.backend.plans_backend.get_object(new_plan.plan_code)
         for k, v in self.base_plan_data.items():
             if k == 'unit_amount_in_cents':
-                self.assertEqual(new_plan_backed[k], {curr:str(amt) for curr, amt in  v.currencies.items()})
+                self.assertEqual(new_plan_backed[k], dict((curr, str(amt)) for curr, amt in v.currencies.items()))
             else:
                 self.assertEqual(new_plan_backed[k], v)
 
