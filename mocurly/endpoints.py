@@ -3,8 +3,11 @@ import recurly
 import six
 import random
 import string
+import dateutil.relativedelta
+import dateutil.parser
+
 from .core import details_route, serialize
-from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend
+from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, subscription_addons_backend
 
 class BaseRecurlyEndpoint(object):
     pk_attr = 'uuid'
@@ -222,7 +225,8 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
     def uris(self, obj):
         uri_out = super(InvoicesEndpoint, self).uris(obj)
         uri_out['account_uri'] = AccountsEndpoint().get_object_uri(obj['account'])
-        uri_out['subscription_uri'] = 'TODO'
+        if 'subscription' in obj:
+            uri_out['subscription_uri'] = SubscriptionsEndpoint().get_object_uri({'uuid': obj['subscription']})
         return uri_out
 
     @staticmethod
@@ -251,3 +255,120 @@ class PlansEndpoint(BaseRecurlyEndpoint):
         defaults = PlansEndpoint.defaults.copy()
         defaults.update(create_info)
         return super(PlansEndpoint, self).create(defaults)
+
+class SubscriptionsEndpoint(BaseRecurlyEndpoint):
+    base_uri = 'subscriptions'
+    backend = subscriptions_backend
+    object_type = 'subscription'
+    template = 'subscription.xml'
+    defaults = { 'quantity': 1 }
+
+    def _calculate_timedelta(self, units, length):
+        timedelta_info = {}
+        timedelta_info[units] = length
+        return dateutil.relativedelta.relativedelta(**timedelta_info)
+
+    def _parse_isoformat(self, isoformat):
+        return dateutil.parser.parse(isoformat)
+
+    def hydrate_foreign_keys(self, obj):
+        if 'plan' not in obj:
+            obj['plan'] = PlansEndpoint.backend.get_object(obj['plan_code'])
+        return obj
+
+    def uris(self, obj):
+        uri_out = super(SubscriptionsEndpoint, self).uris(obj)
+        pseudo_account_object = {}
+        pseudo_account_object[AccountsEndpoint.pk_attr] = obj['account']
+        uri_out['account_uri'] = AccountsEndpoint().get_object_uri(pseudo_account_object)
+        if 'invoice' in obj:
+            pseudo_invoice_object = {}
+            pseudo_invoice_object[InvoicesEndpoint.pk_attr] = obj['invoice']
+            uri_out['invoice_uri'] = InvoicesEndpoint().get_object_uri(pseudo_invoice_object)
+        uri_out['plan_uri'] = PlansEndpoint().get_object_uri(obj['plan'])
+        uri_out['cancel_uri'] = uri_out['object_uri'] + '/cancel'
+        uri_out['terminate_uri'] = uri_out['object_uri'] + '/terminate'
+        return uri_out
+
+    def create(self, create_info):
+        account_code = create_info['account'][AccountsEndpoint.pk_attr]
+        if not AccountsEndpoint.backend.has_object(account_code):
+            AccountsEndpoint().create(create_info['account'])
+        else:
+            AccountsEndpoint().update(create_info['account'])
+        create_info['account'] = account_code
+
+        assert plans_backend.has_object(create_info['plan_code'])
+        plan = plans_backend.get_object(create_info['plan_code'])
+
+        now = datetime.datetime.now()
+
+        # Trial dates need to be calculated
+        if 'trial_ends_at' in create_info:
+            create_info['trial_started_at'] = now.isoformat()
+        elif plan['trial_interval_length'] > 0:
+            create_info['trial_started_at'] = now.isoformat()
+            create_info['trial_ends_at'] = (now + self._calculate_timedelta(plan['trial_interval_unit'], plan['trial_interval_length'])).isoformat()
+
+        # Plan start and end date needs to be calculated
+        if 'starts_at' in create_info:
+            # A custom start date is specified
+            create_info['activated_at'] = create_info['starts_at']
+            create_info['current_period_started_at'] = create_info['starts_at'] # TODO: confirm recurly sets current_period_started_at for future subs
+        elif 'trial_started_at' in create_info:
+            create_info['activated_at'] = self._parse_isoformat(create_info['trial_ends_at'])
+            create_info['current_period_started_at'] = create_info['trial_started_at']
+            create_info['current_period_ends_at'] = create_info['trial_ends_at']
+        else:
+            create_info['activated_at'] = now.isoformat()
+            create_info['current_period_started_at'] = now.isoformat()
+
+        started_at = self._parse_isoformat(create_info['current_period_started_at'])
+        if now >= started_at: # Plan already started
+            if 'first_renewal_date' in create_info:
+                create_info['current_period_ends_at'] = self._parse_isoformat(create_info['first_renewal_date'])
+            else:
+                create_info['current_period_ends_at'] = (started_at + self._calculate_timedelta(plan['plan_interval_unit'], plan['plan_interval_length'])).isoformat()
+
+        # Tax calculated based on plan info
+        # UNSUPPORTED
+        create_info['tax_in_cents'] = 0
+        create_info['tax_type'] = 'usst'
+        create_info['tax_rate'] = 0
+
+        # Subscription states
+        if 'trial_started_at' in create_info:
+            create_info['state'] = 'trial'
+        elif 'current_period_ends_at' not in create_info:
+            create_info['state'] = 'future'
+        else:
+            create_info['state'] = 'active'
+
+        # If there are addons, make sure they exist in the system
+        if 'subscription_add_ons' in create_info:
+            for addon in create_info['subscription_add_ons']:
+                assert subscription_addons_backend.has_object(addon['add_on_code'])
+                addon_obj = subscription_addons_backend.get_object(addon['add_on_code'])
+                addon['unit_amount_in_cents'] = addon_obj['unit_amount_in_cents'][create_info['currency']]
+
+        defaults = SubscriptionsEndpoint.defaults.copy()
+        defaults['unit_amount_in_cents'] = plan['unit_amount_in_cents'][create_info['currency']]
+        defaults.update(create_info)
+
+        # TODO: support bulk
+
+        new_sub = super(SubscriptionsEndpoint, self).create(defaults)
+
+        # create a transaction if the subscription is started
+        if defaults['state'] == 'active':
+            new_transaction = {}
+            new_transaction['account'] = {}
+            new_transaction['account'][AccountsEndpoint.pk_attr] = defaults['account']
+            new_transaction['amount_in_cents'] = defaults['unit_amount_in_cents']
+            new_transaction['currency'] = defaults['currency']
+            TransactionsEndpoint().create(new_transaction)
+            new_invoice = new_transaction['invoice']
+            InvoicesEndpoint.backend.update_object(new_invoice[InvoicesEndpoint.pk_attr], {'subscription': defaults[SubscriptionsEndpoint.pk_attr]})
+            new_sub = SubscriptionsEndpoint.backend.update_object(defaults['uuid'], {'invoice': new_invoice[InvoicesEndpoint.pk_attr]})
+            return self.serialize(new_sub)
+        return new_sub

@@ -1,0 +1,58 @@
+<subscription href="{{ subscription.uris.object_uri }}">
+    <account href="{{ subscription.uris.account_uri }}"/>
+    {% if subscription.uris.invoice_uri %}
+        <invoice href="{{ subscription.uris.invoice_uri }}"/>
+    {% endif %}
+    <plan href="{{ subscription.uris.plan_uri }}">
+        <plan_code>{{ subscription.plan.plan_code }}</plan_code>
+        <name>{{ subscription.plan.plan_name }}</name>
+    </plan>
+    <uuid>{{ subscription.uuid }}</uuid>
+    <state>{{ subscription.state }}</state>
+    <unit_amount_in_cents type="integer">{{ subscription.unit_amount_in_cents }}</unit_amount_in_cents>
+    <currency>{{ subscription.currency }}</currency>
+    <quantity type="integer">{{ subscription.quantity }}</quantity>
+    <activated_at type="datetime">{{ subscription.activated_at }}</activated_at>
+    {% if subscription.canceled_at %}
+        <canceled_at>{{ subscription.canceled_at }}</canceled_at>
+    {% else %}
+        <canceled_at nil="nil"></canceled_at>
+    {% endif %}
+    {% if subscription.expires_at %}
+        <expires_at>{{ subscription.expires_at }}</expires_at>
+    {% else %}
+        <expires_at nil="nil"></expires_at>
+    {% endif %}
+    <current_period_started_at type="datetime">{{ subscription.current_period_started_at }}</current_period_started_at>
+    {% if subscription.current_period_ends_at %}
+        <current_period_ends_at type="datetime">{{ subscription.current_period_ends_at }}</current_period_ends_at>
+    {% else %}
+        <current_period_ends_at nil="nil"></current_period_ends_at>
+    {% endif %}
+    {% if subscription.trial_started_at %}
+        <trial_started_at>{{ subscription.trial_started_at }}</trial_started_at>
+    {% else %}
+        <trial_started_at nil="nil"></trial_started_at>
+    {% endif %}
+    {% if subscription.trial_ends_at %}
+        <trial_ends_at>{{ subscription.trial_ends_at }}</trial_ends_at>
+    {% else %}
+        <trial_ends_at nil="nil"></trial_ends_at>
+    {% endif %}
+    <tax_in_cents type="integer">{{ subscription.tax_in_cents }}</tax_in_cents>
+    <tax_type>{{ subscription.tax_type }}</tax_type>
+    <tax_rate type="float">{{ subscription.tax_rate }}</tax_rate>
+    <po_number nil="nil"></po_number>
+    <net_terms type="integer">0</net_terms>
+    <subscription_add_ons type="array">
+        {% for addon in subscription.subscription_add_ons %}
+            <subscription_add_on>
+                <add_on_code>{{ addon.add_on_code }}</add_on_code>
+                <quantity>{{ addon.quantity }}</quantity>
+                <unit_amount_in_cents>{{ addon.unit_amount_in_cents }}</unit_amount_in_cents>
+            </subscription_add_on>
+        {% endfor %}
+    </subscription_add_ons>
+    <a name="cancel" href="{{ subscription.uris.cancel_uri }}" method="put"/>
+    <a name="terminate" href="{{ subscription.uris.terminate_uri }}" method="put"/>
+</subscription>

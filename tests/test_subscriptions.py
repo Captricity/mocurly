@@ -7,7 +7,7 @@ recurly.API_KEY = 'blah'
 import mocurly.core
 import mocurly.backend
 
-class TestTransaction(unittest.TestCase):
+class TestSubscriptions(unittest.TestCase):
     def setUp(self):
         self.mocurly_ = mocurly.core.mocurly()
         self.mocurly_.start()
@@ -39,6 +39,33 @@ class TestTransaction(unittest.TestCase):
                 'name': 'Gold Plan',
                 'unit_amount_in_cents': recurly.Money(USD=1000, EUR=800)
             }
+        self.base_backed_plan_data = self.base_plan_data.copy()
+        self.base_backed_plan_data['uuid'] = self.base_plan_data['plan_code']
+        self.base_backed_plan_data['unit_amount_in_cents'] = {u'USD': u'1000', u'EUR': u'800'}
+        self.base_backed_plan_data['display_quantity'] = False
+        self.base_backed_plan_data['trial_interval_length'] = 0
+        self.base_backed_plan_data['plan_interval_unit'] = 'months'
+        self.base_backed_plan_data['created_at'] = '2014-08-20T15] =44] =46.683960'
+        self.base_backed_plan_data['tax_exempt'] = False
+        self.base_backed_plan_data['trial_interval_unit'] = 'months'
+        self.base_backed_plan_data['plan_interval_length'] = 1
+
+        self.base_subscription_data = {
+                'plan_code': 'gold',
+                'account': recurly.Account(account_code=self.base_account_data['account_code']),
+                'currency': 'USD'
+            }
+
+        self.base_addon_data = [
+                {
+                    'add_on_code': 'foo',
+                    'unit_amount_in_cents': {'USD': 1000}
+                },
+                {
+                    'add_on_code': 'bar',
+                    'unit_amount_in_cents': {'USD': 80}
+                }
+            ]
 
     def tearDown(self):
         self.mocurly_.stop()
@@ -57,3 +84,28 @@ class TestTransaction(unittest.TestCase):
             else:
                 self.assertEqual(new_plan_backed[k], v)
 
+    def test_simple_subscription_creation(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+
+        self.assertEqual(len(mocurly.backend.subscriptions_backend.datastore), 0)
+
+        new_subscription = recurly.Subscription(**self.base_subscription_data)
+        new_subscription.save()
+
+        self.assertEqual(len(mocurly.backend.subscriptions_backend.datastore), 1)
+
+    def test_subscriptions_with_addons(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+        # add some add ons to the backend
+        for addon in self.base_addon_data:
+            mocurly.backend.subscription_addons_backend.add_object(addon['add_on_code'], addon)
+
+        self.assertEqual(len(mocurly.backend.subscriptions_backend.datastore), 0)
+
+        self.base_subscription_data['subscription_add_ons'] = [recurly.SubscriptionAddOn(add_on_code=addon['add_on_code'], quantity=1) for addon in self.base_addon_data]
+        new_subscription = recurly.Subscription(**self.base_subscription_data)
+        new_subscription.save()
+
+        self.assertEqual(len(mocurly.backend.subscriptions_backend.datastore), 1)

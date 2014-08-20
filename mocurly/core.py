@@ -34,7 +34,7 @@ def deserialize(xml):
         return _deserialize_item(root)
 
 def _deserialize_list(root):
-    raise NotImplementedError
+    return [_deserialize_item(node)[1] for node in root.childNodes]
 
 def _deserialize_item(root):
     object_type = root.tagName
@@ -44,6 +44,8 @@ def _deserialize_item(root):
             obj[node.tagName] = None
         elif len(node.childNodes) == 1 and node.childNodes[0].nodeType == minidom.Node.TEXT_NODE:
             obj[node.tagName] = node.firstChild.nodeValue
+        elif node.hasAttribute('type') and node.getAttribute('type') == 'array':
+            obj[node.tagName] = _deserialize_list(node)
         else:
             child_object_type, child_object = _deserialize_item(node)
             obj[node.tagName] = child_object
@@ -81,14 +83,22 @@ class mocurly(object):
 
     def stop(self):
         if not self.started:
-            raise RunTimeError('Called stop() before start()')
+            raise RuntimeError('Called stop() before start()')
 
         HTTPretty.disable()
 
     def _register(self):
-        from .endpoints import AccountsEndpoint, TransactionsEndpoint, InvoicesEndpoint, PlansEndpoint
+        from .endpoints import AccountsEndpoint
+        from .endpoints import TransactionsEndpoint
+        from .endpoints import InvoicesEndpoint
+        from .endpoints import PlansEndpoint
+        from .endpoints import SubscriptionsEndpoint
 
-        endpoints = [AccountsEndpoint(), TransactionsEndpoint(), InvoicesEndpoint(), PlansEndpoint()]
+        endpoints = [AccountsEndpoint(),
+                TransactionsEndpoint(),
+                InvoicesEndpoint(),
+                PlansEndpoint(),
+                SubscriptionsEndpoint()]
         for endpoint in endpoints:
             # register list views
             list_uri = recurly.base_uri() + endpoint.base_uri
