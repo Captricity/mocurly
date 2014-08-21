@@ -12,5 +12,5 @@ setup(
     packages=find_packages(exclude=("tests", "tests.*")),
     package_data={'mocurly': ['templates/*.xml']},
     install_requires=install_requires,
-    test_suite = 'tests'
+    test_suite='tests'
 )
