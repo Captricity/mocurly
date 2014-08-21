@@ -124,7 +124,7 @@ class TestTransaction(unittest.TestCase):
         mocurly.backend.transactions_backend.add_object('abcd', self.base_transaction_data)
 
         acc = recurly.Account.get(self.base_account_data['uuid'])
-        transactions = acc.transactions()
+        transactions = list(acc.transactions())
         self.assertEqual(len(transactions), 2)
         self.assertEqual(set([transaction.uuid for transaction in transactions]), set(['1234', 'abcd']))
 

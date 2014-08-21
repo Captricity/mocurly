@@ -122,7 +122,7 @@ class mocurly(object):
 
             # register details views
             detail_uri = recurly.base_uri() + endpoint.base_uri + r'/([^/ ]+)'
-            detail_uri_re = re.compile(detail_uri)
+            detail_uri_re = re.compile(detail_uri + r'$')
 
             def retrieve_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
                 pk = detail_uri_re.match(uri).group(1)
