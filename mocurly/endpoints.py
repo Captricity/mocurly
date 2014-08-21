@@ -60,7 +60,7 @@ class BaseRecurlyEndpoint(object):
         out = cls.backend.get_object(pk)
         return self.serialize(out, format=format)
 
-    def update(self, pk, update_info):
+    def update(self, pk, update_info, format=XML):
         cls = self.__class__
         out = cls.backend.update_object(pk, update_info)
         return self.serialize(out, format=format)
