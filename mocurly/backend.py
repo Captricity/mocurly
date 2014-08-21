@@ -43,10 +43,10 @@ class InvoiceBackend(BaseBackend):
 class PlanBackend(BaseBackend):
     pass
 
-class SubscriptionBackend(BaseBackend):
+class PlanAddOnBackend(BaseBackend):
     pass
 
-class SubscriptionAddOnBackend(BaseBackend):
+class SubscriptionBackend(BaseBackend):
     pass
 
 class TransactionBackend(BaseBackend):
@@ -58,9 +58,9 @@ class AdjustmentBackend(BaseBackend):
 accounts_backend = AccountBackend()
 billing_info_backend = BillingInfoBackend()
 invoices_backend = InvoiceBackend()
-plans_backend = SubscriptionBackend()
+plans_backend = PlanBackend()
+plan_add_ons_backend = PlanAddOnBackend()
 subscriptions_backend = SubscriptionBackend()
-subscription_addons_backend = SubscriptionAddOnBackend()
 transactions_backend = TransactionBackend()
 adjustments_backend = AdjustmentBackend()
 
@@ -69,7 +69,7 @@ def clear_backends():
     billing_info_backend.clear_all()
     invoices_backend.clear_all()
     plans_backend.clear_all()
+    plan_add_ons_backend.clear_all()
     subscriptions_backend.clear_all()
-    subscription_addons_backend.clear_all()
     transactions_backend.clear_all()
     adjustments_backend.clear_all()

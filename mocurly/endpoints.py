@@ -7,7 +7,7 @@ import dateutil.relativedelta
 import dateutil.parser
 
 from .core import details_route, serialize, serialize_list, deserialize
-from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, subscription_addons_backend, adjustments_backend
+from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, plan_add_ons_backend, adjustments_backend
 
 class BaseRecurlyEndpoint(object):
     pk_attr = 'uuid'
@@ -27,7 +27,10 @@ class BaseRecurlyEndpoint(object):
         uri_out['object_uri'] = self.get_object_uri(obj)
         return uri_out
 
-    def serialize(self, obj):
+    def serialize(self, obj, format=XML):
+        if format == BaseRecurlyEndpoint.RAW:
+            return obj
+
         cls = self.__class__
         if type(obj) == list:
             for o in obj:
@@ -40,9 +43,7 @@ class BaseRecurlyEndpoint(object):
     def list(self, format=XML):
         cls = self.__class__
         out = cls.backend.list_objects()
-        if format == BaseRecurlyEndpoint.XML:
-            return self.serialize(out)
-        return out
+        return self.serialize(out, format=format)
 
     def create(self, create_info, format=XML):
         cls = self.__class__
@@ -51,23 +52,17 @@ class BaseRecurlyEndpoint(object):
         else:
             create_info['uuid'] = self.generate_id()
         new_obj = cls.backend.add_object(create_info['uuid'], create_info)
-        if format == BaseRecurlyEndpoint.XML:
-            return self.serialize(new_obj)
-        return new_obj
+        return self.serialize(new_obj, format=format)
 
     def retrieve(self, pk, format=XML):
         cls = self.__class__
         out = cls.backend.get_object(pk)
-        if format == BaseRecurlyEndpoint.XML:
-            return self.serialize(out)
-        return out
+        return self.serialize(out, format=format)
 
     def update(self, pk, update_info):
         cls = self.__class__
         out = cls.backend.update_object(pk, update_info)
-        if format == BaseRecurlyEndpoint.XML:
-            return self.serialize(out)
-        return out
+        return self.serialize(out, format=format)
 
     def delete(self, pk):
         cls = self.__class__
@@ -121,23 +116,22 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         uri_out['object_uri'] = uri_out['account_uri'] + '/billing_info'
         return uri_out
 
-    def serialize_billing_info(self, obj):
+    def serialize_billing_info(self, obj, format=BaseRecurlyEndpoint.XML):
+        if format == BaseRecurlyEndpoint.RAW:
+            return obj
+
         obj['uris'] = self.billing_info_uris(obj)
         return serialize('billing_info.xml', 'billing_info', obj)
 
     @details_route('GET', 'billing_info')
     def get_billing_info(self, pk, format=BaseRecurlyEndpoint.XML):
         out = billing_info_backend.get_object(pk)
-        if format == BaseRecurlyEndpoint.XML:
-            return self.serialize_billing_info(out)
-        return out
+        return self.serialize_billing_info(out, format=format)
 
     @details_route('PUT', 'billing_info')
     def update_billing_info(self, pk, update_info, format=BaseRecurlyEndpoint.XML):
         out = billing_info_backend.update_object(pk, update_info)
-        if format == BaseRecurlyEndpoint.XML:
-            return self.serialize_billing_info(out)
-        return out
+        return self.serialize_billing_info(out, format=format)
 
     @details_route('DELETE', 'billing_info')
     def delete_billing_info(self, pk):
@@ -146,9 +140,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
     @details_route('GET', 'transactions', is_list=True)
     def get_transaction_list(self, pk, format=BaseRecurlyEndpoint.XML):
         out = TransactionsEndpoint.backend.list_objects(lambda transaction: transaction['account'] == pk)
-        if format == BaseRecurlyEndpoint.XML:
-            return TransactionsEndpoint().serialize(out)
-        return out
+        return TransactionsEndpoint().serialize(out, format=format)
 
 class TransactionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'transactions'
@@ -333,12 +325,54 @@ class PlansEndpoint(BaseRecurlyEndpoint):
         'display_quantity': False,
         'tax_exempt': False # unsupported
     }
+    add_on_defaults = {
+        'default_quantity': 1,
+        'display_quantity_on_hosted_page': False
+    }
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
         create_info['created_at'] = datetime.datetime.now().isoformat()
         defaults = PlansEndpoint.defaults.copy()
         defaults.update(create_info)
         return super(PlansEndpoint, self).create(defaults, format)
+
+    def generate_plan_add_on_uuid(self, plan_code, add_on_code):
+        return '__'.join([plan_code, add_on_code])
+
+    def plan_add_on_uris(self, obj):
+        uri_out = {}
+        pseudo_plan_object = {}
+        pseudo_plan_object[PlansEndpoint.pk_attr] = obj['plan']
+        uri_out['plan_uri'] = PlansEndpoint().create_object_uri(pseudo_plan_object)
+        uri_out['object_uri'] = uri_out['plan_uri'] + '/add_ons/' + obj['uuid']
+        return uri_out
+
+    def serialize_plan_add_on(self, obj, format=BaseRecurlyEndpoint.XML):
+        if format == BaseRecurlyEndpoint.RAW:
+            return obj
+
+        obj['uris'] = self.plan_add_on_uris(obj)
+        if type(obj) == list:
+            for o in obj:
+                o['uris'] = self.plan_add_on_uris(o)
+            return serialize_list('add_on.xml', 'add_ons', 'add_on', obj)
+        else:
+            obj['uris'] = self.plan_add_on_uris(obj)
+            return serialize('add_on.xml', 'add_on', obj)
+
+    @details_route('GET', 'add_ons', is_list=True)
+    def get_add_on_list(self, pk, format=BaseRecurlyEndpoint.XML):
+        out = plan_add_ons_backend.list_objects(lambda add_on: add_on['plan'] == pk)
+        return self.serialize_plan_add_on(out, format=format)
+
+    @details_route('POST', 'add_ons')
+    def create_add_on(self, pk, create_info, format=BaseRecurlyEndpoint.XML):
+        assert PlansEndpoint.backend.has_object(pk)
+        create_info['plan'] = pk
+        create_info['created_at'] = datetime.datetime.now().isoformat()
+        if 'accounting_code' not in create_info:
+            create_info['accounting_code'] = create_info['add_on_code']
+        return self.serialize_plan_add_on(plan_add_ons_backend.add_object(self.generate_plan_add_on_uuid(pk, create_info['add_on_code']), create_info), format=format)
 
 class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'subscriptions'
@@ -359,6 +393,13 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     def hydrate_foreign_keys(self, obj):
         if 'plan' not in obj:
             obj['plan'] = PlansEndpoint.backend.get_object(obj['plan_code'])
+        if 'subscription_add_ons' in obj:
+            def hydrate_add_ons(add_on):
+                if isinstance(add_on, six.string_types):
+                    add_on = plan_add_ons_backend.get_object(PlansEndpoint().generate_plan_add_on_uuid(obj['plan_code'], add_on))
+                    add_on['unit_amount_in_cents'] = add_on['unit_amount_in_cents'][obj['currency']]
+                return add_on
+            obj['subscription_add_ons'] = map(hydrate_add_ons, obj['subscription_add_ons'])
         return obj
 
     def uris(self, obj):
@@ -431,10 +472,10 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
 
         # If there are addons, make sure they exist in the system
         if 'subscription_add_ons' in create_info:
-            for addon in create_info['subscription_add_ons']:
-                assert subscription_addons_backend.has_object(addon['add_on_code'])
-                addon_obj = subscription_addons_backend.get_object(addon['add_on_code'])
-                addon['unit_amount_in_cents'] = addon_obj['unit_amount_in_cents'][create_info['currency']]
+            for add_on in create_info['subscription_add_ons']:
+                add_on_uuid = PlansEndpoint().generate_plan_add_on_uuid(create_info['plan_code'], add_on['add_on_code'])
+                assert plan_add_ons_backend.has_object(add_on_uuid)
+            create_info['subscription_add_ons'] = [add_on['add_on_code'] for add_on in create_info['subscription_add_ons']]
 
         defaults = SubscriptionsEndpoint.defaults.copy()
         defaults['unit_amount_in_cents'] = plan['unit_amount_in_cents'][create_info['currency']]
@@ -442,26 +483,27 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
 
         # TODO: support bulk
 
-        new_sub = super(SubscriptionsEndpoint, self).create(defaults, format)
+        new_sub = super(SubscriptionsEndpoint, self).create(defaults, format=BaseRecurlyEndpoint.RAW)
+        self.hydrate_foreign_keys(new_sub)
 
         if defaults['state'] == 'active':
             # create a transaction if the subscription is started
             new_transaction = {}
             new_transaction['account'] = {}
-            new_transaction['account'][AccountsEndpoint.pk_attr] = defaults['account']
-            new_transaction['amount_in_cents'] = defaults['unit_amount_in_cents'] # TODO calculate total charge
-            new_transaction['currency'] = defaults['currency']
+            new_transaction['account'][AccountsEndpoint.pk_attr] = new_sub['account']
+            new_transaction['amount_in_cents'] = new_sub['unit_amount_in_cents'] # TODO calculate total charge
+            new_transaction['currency'] = new_sub['currency']
             new_transaction = TransactionsEndpoint().create(new_transaction, format=BaseRecurlyEndpoint.RAW)
             new_invoice_id = new_transaction['invoice']
 
             # Create new adjustments for the sub to track line items
             adjustments = []
             plan_charge_line_item = {
-                        'account_code': defaults['account'],
-                        'currency': defaults['currency'],
-                        'unit_amount_in_cents': defaults['unit_amount_in_cents'],
-                        'description': plan['name'],
-                        'quantity': defaults['quantity'],
+                        'account_code': new_sub['account'],
+                        'currency': new_sub['currency'],
+                        'unit_amount_in_cents': new_sub['unit_amount_in_cents'],
+                        'description': new_sub['plan']['name'],
+                        'quantity': new_sub['quantity'],
                         'invoice': new_invoice_id
                     }
             adjustments_endpoint = AdjustmentsEndpoint()
@@ -469,23 +511,20 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             adjustments.append(plan_charge_line_item[AdjustmentsEndpoint.pk_attr])
 
             # Calculate charges for addons
-            if 'subscription_add_ons' in create_info:
-                for addon in create_info['subscription_add_ons']:
+            if 'subscription_add_ons' in new_sub:
+                for add_on in new_sub['subscription_add_ons']:
                     plan_charge_line_item = {
-                                'account_code': defaults['account'],
-                                'currency': defaults['currency'],
-                                'unit_amount_in_cents': addon['unit_amount_in_cents'],
-                                'description': addon['add_on_code'], # TODO
-                                'quantity': defaults['quantity'],
+                                'account_code': new_sub['account'],
+                                'currency': new_sub['currency'],
+                                'unit_amount_in_cents': add_on['unit_amount_in_cents'],
+                                'description': add_on['name'],
+                                'quantity': new_sub['quantity'],
                                 'invoice': new_invoice_id
                             }
                     plan_charge_line_item = adjustments_endpoint.create(plan_charge_line_item, format=BaseRecurlyEndpoint.RAW)
                     adjustments.append(plan_charge_line_item[AdjustmentsEndpoint.pk_attr])
 
-            InvoicesEndpoint.backend.update_object(new_invoice_id, {'subscription': defaults[SubscriptionsEndpoint.pk_attr], 'line_items': adjustments})
+            InvoicesEndpoint.backend.update_object(new_invoice_id, {'subscription': new_sub[SubscriptionsEndpoint.pk_attr], 'line_items': adjustments})
 
             new_sub = SubscriptionsEndpoint.backend.update_object(defaults['uuid'], {'invoice': new_invoice_id})
-            if format == BaseRecurlyEndpoint.XML:
-                return self.serialize(new_sub)
-            return new_sub
-        return new_sub
+        return self.serialize(new_sub, format=format)
