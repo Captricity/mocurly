@@ -32,7 +32,9 @@
     <collection_method>{{ invoice.collection_method }}</collection_method>
     <redemption href="{{ invoice.uris.redemption_uri }}"/>
     <line_items type="array">
-        <!-- TODO import adjustments -->
+        {% for adjustment in invoice.line_items %}
+            {% include 'adjustment.xml' %}
+        {% endfor %}
     </line_items>
     <transactions type="array">
         {% for transaction in invoice.transactions %}

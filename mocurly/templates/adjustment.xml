@@ -1,0 +1,30 @@
+<adjustment type="{{ adjustment.type }}" href="{{ adjustment.uris.object_uri }}">
+    <account href="{{ adjustment.uris.account_uri }}"/>
+    <invoice href="{{ adjustment.uris.invoice_uri }}"/>
+    <uuid>{{ adjustment.uuid }}</uuid>
+    <description>{{ adjustment.description }}</description>
+    {% if adjustment.accounting_code %}
+        <accounting_code>{{ adjustment.accounting_code }}</accounting_code>
+    {% else %}
+        <accounting_code nil="nil"></accounting_code>
+    {% endif %}
+    <product_code>{{ adjustment.product_code }}</product_code>
+    <origin>{{ adjustment.origin }}</origin>
+    <unit_amount_in_cents type="integer">{{ adjustment.unit_amount_in_cents }}</unit_amount_in_cents>
+    <quantity type="integer">{{ adjustment.quantity }}</quantity>
+    <discount_in_cents type="integer">{{ adjustment.discount_in_cents }}</discount_in_cents>
+    <tax_in_cents type="integer">{{ adjustment.tax_in_cents }}</tax_in_cents>
+    <total_in_cents type="integer">{{ adjustment.total_in_cents }}</total_in_cents>
+    <currency>{{ adjustment.currency }}</currency>
+    <tax_exempt type="boolean">{{ adjustment.tax_exempt }}</tax_exempt>
+    <tax_details type="array">
+        <!-- TODO -->
+    </tax_details>
+    <start_date type="datetime">{{ adjustment.start_date }}</start_date>
+    {% if adjustment.end_date %}
+        <end_date>{{ adjustment.end_date }}</end_date>
+    {% else %}
+        <end_date nil="nil"></end_date>
+    {% endif %}
+    <created_at type="datetime">{{ adjustment.created_at }}</created_at>
+</adjustment>
