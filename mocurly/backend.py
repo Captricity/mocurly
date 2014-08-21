@@ -40,6 +40,12 @@ class BillingInfoBackend(BaseBackend):
 class InvoiceBackend(BaseBackend):
     pass
 
+class CouponBackend(BaseBackend):
+    pass
+
+class CouponRedemptionBackend(BaseBackend):
+    pass
+
 class PlanBackend(BaseBackend):
     pass
 
@@ -58,6 +64,8 @@ class AdjustmentBackend(BaseBackend):
 accounts_backend = AccountBackend()
 billing_info_backend = BillingInfoBackend()
 invoices_backend = InvoiceBackend()
+coupons_backend = CouponBackend()
+coupon_redemptions_backend = CouponRedemptionBackend()
 plans_backend = PlanBackend()
 plan_add_ons_backend = PlanAddOnBackend()
 subscriptions_backend = SubscriptionBackend()
@@ -68,6 +76,8 @@ def clear_backends():
     accounts_backend.clear_all()
     billing_info_backend.clear_all()
     invoices_backend.clear_all()
+    coupons_backend.clear_all()
+    coupon_redemptions_backend.clear_all()
     plans_backend.clear_all()
     plan_add_ons_backend.clear_all()
     subscriptions_backend.clear_all()

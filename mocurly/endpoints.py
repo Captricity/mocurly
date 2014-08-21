@@ -7,7 +7,7 @@ import dateutil.relativedelta
 import dateutil.parser
 
 from .core import details_route, serialize, serialize_list, deserialize
-from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, plan_add_ons_backend, adjustments_backend
+from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, plan_add_ons_backend, adjustments_backend, coupons_backend, coupon_redemptions_backend
 
 class BaseRecurlyEndpoint(object):
     pk_attr = 'uuid'
@@ -310,6 +310,72 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
             return '1000'
         return str(max(int(invoice['invoice_number']) for invoice in InvoicesEndpoint.backend.list_objects()) + 1)
 
+class CouponsEndpoint(BaseRecurlyEndpoint):
+    base_uri = 'coupons'
+    backend = coupons_backend
+    object_type = 'coupon'
+    object_type_plural = 'coupons'
+    pk_attr = 'coupon_code'
+    template = 'coupon.xml'
+    defaults = {
+            'state': 'redeemable',
+            'applies_to_all_plans': True,
+            'single_use': False
+        }
+
+    def uris(self, obj):
+        uri_out = super(CouponsEndpoint, self).uris(obj)
+        uri_out['redemptions_uri'] = uri_out['object_uri'] + '/redemptions'
+        uri_out['redeem_uri'] = uri_out['object_uri'] + '/redeem'
+        return uri_out
+
+    def create(self, create_info, format=BaseRecurlyEndpoint.XML):
+        defaults = CouponsEndpoint.defaults.copy()
+        defaults.update(create_info)
+        return super(CouponsEndpoint, self).create(defaults, format)
+
+    def generate_coupon_redemption_uuid(self, coupon_code, account_code):
+        return '__'.join([coupon_code, account_code])
+
+    def hydrate_coupon_redemption_foreign_keys(self, obj):
+        if isinstance(obj['coupon'], six.string_types):
+            obj['coupon'] = CouponsEndpoint.backend.get_object(obj['coupon'])
+        return obj
+
+    def coupon_redemption_uris(self, obj):
+        uri_out = {}
+        uri_out['coupon_uri'] = CouponsEndpoint().get_object_uri(obj['coupon'])
+        pseudo_account_object = {}
+        pseudo_account_object[AccountsEndpoint.pk_attr] = obj['account_code']
+        uri_out['account_uri'] = AccountsEndpoint().get_object_uri(pseudo_account_object)
+        uri_out['object_uri'] = uri_out['account_uri'] + '/redemption'
+        return uri_out
+
+    def serialize_coupon_redemption(self, obj, format=BaseRecurlyEndpoint.XML):
+        obj = self.hydrate_coupon_redemption_foreign_keys(obj)
+        if format == BaseRecurlyEndpoint.RAW:
+            return obj
+
+        if type(obj) == list:
+            for o in obj:
+                o['uris'] = self.coupon_redemption_uris(o)
+            return serialize_list('redemption.xml', 'redemptions', 'redemption', obj)
+        else:
+            obj['uris'] = self.coupon_redemption_uris(obj)
+            return serialize('redemption.xml', 'redemption', obj)
+
+    @details_route('GET', 'redemptions', is_list=True)
+    def get_coupon_redemptions(self, pk, format=BaseRecurlyEndpoint.XML):
+        obj_list = coupon_redemptions_backend.list_objects(lambda redemption: redemption['coupon'] == pk)
+        return self.serialize_coupon_redemption(obj_list, format=format)
+
+    @details_route('POST', 'redeem')
+    def redeem_coupon(self, pk, redeem_info, format=BaseRecurlyEndpoint.XML):
+        assert CouponsEndpoint.backend.has_object(pk)
+        redeem_info['coupon'] = pk
+        redeem_info['created_at'] = datetime.datetime.now().isoformat()
+        return self.serialize_coupon_redemption(coupon_redemptions_backend.add_object(self.generate_coupon_redemption_uuid(pk, redeem_info['account_code']), redeem_info), format=format)
+
 class PlansEndpoint(BaseRecurlyEndpoint):
     base_uri = 'plans'
     backend = plans_backend
@@ -343,7 +409,7 @@ class PlansEndpoint(BaseRecurlyEndpoint):
         uri_out = {}
         pseudo_plan_object = {}
         pseudo_plan_object[PlansEndpoint.pk_attr] = obj['plan']
-        uri_out['plan_uri'] = PlansEndpoint().create_object_uri(pseudo_plan_object)
+        uri_out['plan_uri'] = PlansEndpoint().get_object_uri(pseudo_plan_object)
         uri_out['object_uri'] = uri_out['plan_uri'] + '/add_ons/' + obj['uuid']
         return uri_out
 
@@ -351,7 +417,6 @@ class PlansEndpoint(BaseRecurlyEndpoint):
         if format == BaseRecurlyEndpoint.RAW:
             return obj
 
-        obj['uris'] = self.plan_add_on_uris(obj)
         if type(obj) == list:
             for o in obj:
                 o['uris'] = self.plan_add_on_uris(o)

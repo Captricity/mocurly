@@ -96,13 +96,17 @@ class mocurly(object):
 
     def _register(self):
         from .endpoints import AccountsEndpoint
+        from .endpoints import AdjustmentsEndpoint
         from .endpoints import TransactionsEndpoint
+        from .endpoints import CouponsEndpoint
         from .endpoints import InvoicesEndpoint
         from .endpoints import PlansEndpoint
         from .endpoints import SubscriptionsEndpoint
 
         endpoints = [AccountsEndpoint(),
+                AdjustmentsEndpoint(),
                 TransactionsEndpoint(),
+                CouponsEndpoint(),
                 InvoicesEndpoint(),
                 PlansEndpoint(),
                 SubscriptionsEndpoint()]

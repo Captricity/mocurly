@@ -1,0 +1,7 @@
+<redemption href="{{ redemption.uris.object_uri }}">
+  <coupon href="{{ redemption.uris.coupon_uri }}"/>
+  <account href="{{ redemption.uris.account_uri }}"/>
+  <single_use type="boolean">{{ redemption.coupon.single_use }}</single_use>
+  <currency>{{ redemption.currency }}</currency>
+  <created_at type="datetime">{{ redemption.created_at }}</created_at>
+</redemption>

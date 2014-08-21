@@ -1,0 +1,42 @@
+<coupon href="{{ coupon.uris.object_uri }}">
+    <redemptions href="{{ coupon.uris.redemptions_uri }}"/>
+    <coupon_code>{{ coupon.coupon_code }}</coupon_code>
+    <name>{{ coupon.name }}</name>
+    <state>{{ coupon.state }}</state>
+    <discount_type>{{ coupon.discount_type }}</discount_type>
+    {% if coupon.discount_type == 'percent' %}
+        <discount_percent type="integer">{{ coupon.discount_percent }}</discount_percent>
+    {% else %}
+        <discount_in_cents>
+            {% for currency, value in plan.unit_amount_in_cents.items() %}
+                <{{ currency }} type="integer">{{ value }}</{{ currency }}>
+            {% endfor %}
+        </discount_in_cents>
+    {% endif %}
+    {% if coupon.redeem_by_date %}
+        <redeem_by_date type="datetime">{{ coupon.redeem_by_date }}</redeem_by_date>
+    {% else %}
+        <redeem_by_date nil="nil"></redeem_by_date>
+    {% endif %}
+    <single_use type="boolean">{% if coupon.single_use %}true{% else %}false{% endif %}</single_use>
+    {% if coupon.applies_for_months %}
+        <applies_for_months>{{ coupon.applies_for_months }}</applies_for_months>
+    {% else %}
+        <applies_for_months nil="nil"></applies_for_months>
+    {% endif %}
+    {% if coupon.max_redemptions %}
+    <max_redemptions type="integer">{{ coupon.max_redemptions }}</max_redemptions>
+    {% else %}
+        <max_redemptions nil="nil"></max_redemptions>
+    {% endif %}
+    <applies_to_all_plans type="boolean">{% if coupon.applies_to_all_plans %}true{% else %}false{% endif %}</applies_to_all_plans>
+    <created_at type="datetime">{{ coupon.created_at }}</created_at>
+    {% if not coupon.applies_to_all_plans %}
+        <plan_codes type="array">
+            {% for plan_code in coupon.plan_codes %}
+                <plan_code>{{ plan_code }}</plan_code>
+            {% endfor %}
+        </plan_codes>
+    {% endif %}
+    <a name="redeem" href="{{ coupon.uris.redeem_uri }}" method="post"/>
+</coupon>
