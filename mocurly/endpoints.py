@@ -510,7 +510,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         if not AccountsEndpoint.backend.has_object(account_code):
             accounts_endpoint.create(create_info['account'])
         else:
-            accounts_endpoint.update(create_info['account'])
+            accounts_endpoint.update(account_code, create_info['account'])
         create_info['account'] = account_code
 
         assert plans_backend.has_object(create_info['plan_code'])
