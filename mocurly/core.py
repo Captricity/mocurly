@@ -105,7 +105,9 @@ class mocurly(object):
         self.stop()
 
     def start(self):
+        from .endpoints import clear_endpoints
         self.started = True
+        clear_endpoints()
         clear_backends()
 
         if not HTTPretty.is_enabled():

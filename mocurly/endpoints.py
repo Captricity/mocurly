@@ -632,5 +632,5 @@ endpoints = [accounts_endpoint,
         plans_endpoint,
         subscriptions_endpoint]
 
-def clear_state():
+def clear_endpoints():
     transactions_endpoint.clear_state()
