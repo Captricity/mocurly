@@ -154,6 +154,9 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         self.registered_errors = {}
         return super(TransactionsEndpoint, self).__init__()
 
+    def clear_state(self):
+        self.registered_errors = {}
+
     def register_transaction_failure(self, account_code, error_code):
         self.registered_errors[account_code] = error_code
 
@@ -628,3 +631,6 @@ endpoints = [accounts_endpoint,
         invoices_endpoint,
         plans_endpoint,
         subscriptions_endpoint]
+
+def clear_state():
+    transactions_endpoint.clear_state()

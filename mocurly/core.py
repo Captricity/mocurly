@@ -1,5 +1,6 @@
 import recurly
 import re
+import ssl
 import xml.dom.minidom as minidom
 from six.moves.urllib.parse import urlparse, parse_qs
 from httpretty import HTTPretty
@@ -17,6 +18,27 @@ def details_route(method, uri, is_list=False):
         func.is_list = is_list
         return func
     return details_route_decorator
+
+class callback(object):
+    def __init__(self, mocurly_instance):
+        self.mocurly_instance = mocurly_instance
+
+    def __call__(self, func):
+        def wrapped(request, uri, headers, **kwargs):
+            if self.mocurly_instance.timeout_connection:
+                raise ssl.SSLError('The read operation timed out')
+
+            try:
+                return_val = func(request, uri, headers, **kwargs)
+            except ResponseError as exc:
+                if not self.mocurly_instance.timeout_connection_successful_post:
+                    return exc.status_code, headers, exc.response_body
+
+            if self.mocurly_instance.timeout_connection_successful_post:
+                raise ssl.SSLError('The read operation timed out')
+
+            return return_val
+        return wrapped
 
 def serialize_list(template, object_type_plural, object_type, object_list):
     serialized_obj_list = []
@@ -64,6 +86,8 @@ class mocurly(object):
         self.started = False
         HTTPretty.reset()
 
+        self.timeout_connection = False
+        self.timeout_connection_successful_post = False
         self.func = func
 
     def __call__(self, *args, **kwargs):
@@ -95,6 +119,18 @@ class mocurly(object):
 
         HTTPretty.disable()
 
+    def start_timeout_all_connections(self):
+        self.timeout_connection = True
+
+    def stop_timeout_all_connections(self):
+        self.timeout_connection = False
+
+    def start_timeout_all_connections_successful_post(self):
+        self.timeout_connection_successful_post = True
+
+    def stop_timeout_all_connections_successful_post(self):
+        self.timeout_connection_successful_post = False
+
     def register_transaction_failure(self, account_code, error_code):
         from .endpoints import transactions_endpoint
         transactions_endpoint.register_transaction_failure(account_code, error_code)
@@ -106,73 +142,55 @@ class mocurly(object):
             list_uri = recurly.base_uri() + endpoint.base_uri
 
             def list_callback(request, uri, headers, endpoint=endpoint):
-                try:
-                    xml, item_count = endpoint.list()
-                    headers['X-Records'] = item_count
-                    return 200, headers, xml
-                except ResponseError as exc:
-                    return exc.status_code, headers, exc.response_body
-            HTTPretty.register_uri(HTTPretty.GET, list_uri, body=list_callback, content_type="application/xml")
+                xml, item_count = endpoint.list()
+                headers['X-Records'] = item_count
+                return 200, headers, xml
+            HTTPretty.register_uri(HTTPretty.GET, list_uri, body=callback(self)(list_callback), content_type="application/xml")
 
             def create_callback(request, uri, headers, endpoint=endpoint):
-                try:
-                    return 200, headers, endpoint.create(deserialize(request.body)[1])
-                except ResponseError as exc:
-                    return exc.status_code, headers, exc.response_body
-            HTTPretty.register_uri(HTTPretty.POST, list_uri, body=create_callback, content_type="application/xml")
+                return 200, headers, endpoint.create(deserialize(request.body)[1])
+            HTTPretty.register_uri(HTTPretty.POST, list_uri, body=callback(self)(create_callback), content_type="application/xml")
 
             # register details views
             detail_uri = recurly.base_uri() + endpoint.base_uri + r'/([^/ ]+)'
             detail_uri_re = re.compile(detail_uri + r'$')
 
             def retrieve_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-                try:
-                    pk = detail_uri_re.match(uri).group(1)
-                    return 200, headers, endpoint.retrieve(pk)
-                except ResponseError as exc:
-                    return exc.status_code, headers, exc.response_body
-            HTTPretty.register_uri(HTTPretty.GET, detail_uri_re, body=retrieve_callback, content_type="application/xml")
+                pk = detail_uri_re.match(uri).group(1)
+                return 200, headers, endpoint.retrieve(pk)
+            HTTPretty.register_uri(HTTPretty.GET, detail_uri_re, body=callback(self)(retrieve_callback), content_type="application/xml")
 
             def update_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-                try:
-                    pk = detail_uri_re.match(uri).group(1)
-                    return 200, headers, endpoint.update(pk, deserialize(request.body)[1])
-                except ResponseError as exc:
-                    return exc.status_code, headers, exc.response_body
-            HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=update_callback, content_type="application/xml")
+                pk = detail_uri_re.match(uri).group(1)
+                return 200, headers, endpoint.update(pk, deserialize(request.body)[1])
+            HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=callback(self)(update_callback), content_type="application/xml")
 
             def delete_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-                try:
-                    parsed_url = urlparse(uri)
-                    pk = detail_uri_re.match('{0}://{1}{2}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
-                    endpoint.delete(pk, **parse_qs(parsed_url.query))
-                    return 204, headers, ''
-                except ResponseError as exc:
-                    return exc.status_code, headers, exc.response_body
-            HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=delete_callback)
+                parsed_url = urlparse(uri)
+                pk = detail_uri_re.match('{0}://{1}{2}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
+                endpoint.delete(pk, **parse_qs(parsed_url.query))
+                return 204, headers, ''
+            HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=callback(self)(delete_callback))
 
             # register extra views
             for method in filter(lambda method: callable(method) and getattr(method, 'is_route', False), (getattr(endpoint, m) for m in dir(endpoint))):
                 uri = detail_uri + '/' + method.uri
                 uri_re = re.compile(uri)
-                def callback(request, uri, headers, method=method, uri_re=uri_re):
-                    try:
-                        pk = uri_re.match(uri).group(1)
-                        if method.method == 'DELETE':
-                            status = 204
-                        else:
-                            status = 200
-                        if request.method in ['POST', 'PUT']:
-                            result = method(pk, deserialize(request.body)[1])
-                        else:
-                            result = method(pk)
-                        if method.is_list:
-                            headers['X-Records'] = result[1]
-                            result = result[0]
-                        return status, headers, result
-                    except ResponseError as exc:
-                        return exc.status_code, headers, exc.response_body
+                def extra_route_callback(request, uri, headers, method=method, uri_re=uri_re):
+                    pk = uri_re.match(uri).group(1)
+                    if method.method == 'DELETE':
+                        status = 204
+                    else:
+                        status = 200
+                    if request.method in ['POST', 'PUT']:
+                        result = method(pk, deserialize(request.body)[1])
+                    else:
+                        result = method(pk)
+                    if method.is_list:
+                        headers['X-Records'] = result[1]
+                        result = result[0]
+                    return status, headers, result
                 if method.method == 'DELETE':
-                    HTTPretty.register_uri(method.method, uri_re, body=callback)
+                    HTTPretty.register_uri(method.method, uri_re, body=callback(self)(extra_route_callback))
                 else:
-                    HTTPretty.register_uri(method.method, uri_re, body=callback, content_type="application/xml")
+                    HTTPretty.register_uri(method.method, uri_re, body=callback(self)(extra_route_callback), content_type="application/xml")
