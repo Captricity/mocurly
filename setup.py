@@ -1,10 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires = [
-    "recurly",
-    "httpretty>=0.6.1",
-    "Jinja2"
-]
+install_requires = open('requirements.txt').read().split()
 
 setup(
     name='mocurly',
