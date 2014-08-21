@@ -47,5 +47,11 @@
             {% include 'account.xml' %}
         {% endwith %}
     </details>
+
+    {% if transaction.transaction_error %}
+        {% with transaction_error=transaction.transaction_error %}
+            {% include 'transaction_error.xml' %}
+        {% endwith %}
+    {% endif %}
     <a name="refund" href="{{ transaction.uris.object_uri }}" method="delete" />
 </transaction>

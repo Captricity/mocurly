@@ -1,11 +1,10 @@
 import unittest
-import datetime
-import iso8601
 import recurly
 recurly.API_KEY = 'blah'
 
 import mocurly.core
 import mocurly.backend
+import mocurly.errors
 
 class TestTransaction(unittest.TestCase):
     def setUp(self):
@@ -43,6 +42,18 @@ class TestTransaction(unittest.TestCase):
 
     def tearDown(self):
         self.mocurly_.stop()
+
+    def test_transaction_failure(self):
+        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
+        self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 0)
+
+        self.mocurly_.register_transaction_failure(self.base_account_data['uuid'], mocurly.errors.TRANSACTION_DECLINED)
+        self.base_transaction_data['account'] = recurly.Account(account_code=self.base_account_data['uuid'])
+        new_transaction = recurly.Transaction(**self.base_transaction_data)
+        self.assertRaises(recurly.ValidationError, new_transaction.save)
+
+        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
+        self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 0)
 
     def test_simple_transaction_creation(self):
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)

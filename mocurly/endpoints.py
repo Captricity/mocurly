@@ -6,6 +6,7 @@ import string
 import dateutil.relativedelta
 import dateutil.parser
 
+from .errors import TRANSACTION_ERRORS, ResponseError
 from .core import details_route, serialize, serialize_list, deserialize
 from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, plan_add_ons_backend, adjustments_backend, coupons_backend, coupon_redemptions_backend
 
@@ -140,7 +141,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
     @details_route('GET', 'transactions', is_list=True)
     def get_transaction_list(self, pk, format=BaseRecurlyEndpoint.XML):
         out = TransactionsEndpoint.backend.list_objects(lambda transaction: transaction['account'] == pk)
-        return TransactionsEndpoint().serialize(out, format=format)
+        return transactions_endpoint.serialize(out, format=format)
 
 class TransactionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'transactions'
@@ -148,6 +149,13 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
     object_type = 'transaction'
     object_type_plural = 'transactions'
     template = 'transaction.xml'
+
+    def __init__(self):
+        self.registered_errors = {}
+        return super(TransactionsEndpoint, self).__init__()
+
+    def register_transaction_failure(self, account_code, error_code):
+        self.registered_errors[account_code] = error_code
 
     def hydrate_foreign_keys(self, obj):
         if isinstance(obj['account'], six.string_types):
@@ -160,11 +168,11 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
 
     def uris(self, obj):
         uri_out = super(TransactionsEndpoint, self).uris(obj)
-        obj['account']['uris'] = AccountsEndpoint().uris(obj['account'])
+        obj['account']['uris'] = accounts_endpoint.uris(obj['account'])
         uri_out['account_uri'] = obj['account']['uris']['object_uri']
         if 'invoice' in obj:
             # To avoid infinite recursion
-            uri_out['invoice_uri'] = InvoicesEndpoint().get_object_uri(obj['invoice'])
+            uri_out['invoice_uri'] = invoices_endpoint.get_object_uri(obj['invoice'])
         uri_out['subscription_uri'] = 'TODO'
         return uri_out
 
@@ -181,6 +189,19 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         create_info['voidable'] = True
         create_info['refundable'] = True
         create_info['created_at'] = datetime.datetime.now().isoformat()
+
+        # Check to see if we need to throw an error for card failure
+        if create_info['account'] in self.registered_errors:
+            # update the new transaction with error info
+            create_info['voidable'] = False
+            create_info['refundable'] = False
+            create_info['status'] = 'declined'
+            error_code = self.registered_errors[create_info['account']]
+            transaction_error = TRANSACTION_ERRORS[error_code]
+            create_info['transaction_error'] = transaction_error
+            transaction_xml = super(TransactionsEndpoint, self).create(create_info, format)
+            error_xml = serialize('transaction_error.xml', 'transaction_error', transaction_error)
+            raise ResponseError(422, '<errors>{0}{1}</errors>'.format(error_xml, transaction_xml))
 
         # Every new transaction creates a new invoice
         new_invoice = {
@@ -248,10 +269,10 @@ class AdjustmentsEndpoint(BaseRecurlyEndpoint):
         uri_out = super(AdjustmentsEndpoint, self).uris(obj)
         pseudo_account_object = {}
         pseudo_account_object[AccountsEndpoint.pk_attr] = obj['account_code']
-        uri_out['account_uri'] = AccountsEndpoint().get_object_uri(pseudo_account_object)
+        uri_out['account_uri'] = accounts_endpoint.get_object_uri(pseudo_account_object)
         pseudo_invoice_object = {}
         pseudo_invoice_object[InvoicesEndpoint.pk_attr] = obj['invoice']
-        uri_out['invoice_uri'] = InvoicesEndpoint().get_object_uri(pseudo_invoice_object)
+        uri_out['invoice_uri'] = invoices_endpoint.get_object_uri(pseudo_invoice_object)
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
@@ -290,18 +311,18 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
             obj['transactions'] = [TransactionsEndpoint.backend.get_object(transaction_id) if isinstance(transaction_id, six.string_types) else transaction_id for transaction_id in obj['transactions']]
             for transaction in obj['transactions']:
                 transaction['invoice'] = obj
-                transaction['uris'] = TransactionsEndpoint().uris(transaction)
+                transaction['uris'] = transactions_endpoint.uris(transaction)
         if 'line_items' in obj:
             obj['line_items'] = [AdjustmentsEndpoint.backend.get_object(adjustment_id) if isinstance(adjustment_id, six.string_types) else adjustment_id for adjustment_id in obj['line_items']]
             for adjustment in obj['line_items']:
-                adjustment['uris'] = AdjustmentsEndpoint().uris(adjustment)
+                adjustment['uris'] = adjustments_endpoint.uris(adjustment)
         return obj
 
     def uris(self, obj):
         uri_out = super(InvoicesEndpoint, self).uris(obj)
-        uri_out['account_uri'] = AccountsEndpoint().get_object_uri(obj['account'])
+        uri_out['account_uri'] = accounts_endpoint.get_object_uri(obj['account'])
         if 'subscription' in obj:
-            uri_out['subscription_uri'] = SubscriptionsEndpoint().get_object_uri({'uuid': obj['subscription']})
+            uri_out['subscription_uri'] = subscriptions_endpoint.get_object_uri({'uuid': obj['subscription']})
         return uri_out
 
     @staticmethod
@@ -344,10 +365,10 @@ class CouponsEndpoint(BaseRecurlyEndpoint):
 
     def coupon_redemption_uris(self, obj):
         uri_out = {}
-        uri_out['coupon_uri'] = CouponsEndpoint().get_object_uri(obj['coupon'])
+        uri_out['coupon_uri'] = coupons_endpoint.get_object_uri(obj['coupon'])
         pseudo_account_object = {}
         pseudo_account_object[AccountsEndpoint.pk_attr] = obj['account_code']
-        uri_out['account_uri'] = AccountsEndpoint().get_object_uri(pseudo_account_object)
+        uri_out['account_uri'] = accounts_endpoint.get_object_uri(pseudo_account_object)
         uri_out['object_uri'] = uri_out['account_uri'] + '/redemption'
         return uri_out
 
@@ -409,7 +430,7 @@ class PlansEndpoint(BaseRecurlyEndpoint):
         uri_out = {}
         pseudo_plan_object = {}
         pseudo_plan_object[PlansEndpoint.pk_attr] = obj['plan']
-        uri_out['plan_uri'] = PlansEndpoint().get_object_uri(pseudo_plan_object)
+        uri_out['plan_uri'] = plans_endpoint.get_object_uri(pseudo_plan_object)
         uri_out['object_uri'] = uri_out['plan_uri'] + '/add_ons/' + obj['uuid']
         return uri_out
 
@@ -461,7 +482,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         if 'subscription_add_ons' in obj:
             def hydrate_add_ons(add_on):
                 if isinstance(add_on, six.string_types):
-                    add_on = plan_add_ons_backend.get_object(PlansEndpoint().generate_plan_add_on_uuid(obj['plan_code'], add_on))
+                    add_on = plan_add_ons_backend.get_object(plans_endpoint.generate_plan_add_on_uuid(obj['plan_code'], add_on))
                     add_on['unit_amount_in_cents'] = add_on['unit_amount_in_cents'][obj['currency']]
                 return add_on
             obj['subscription_add_ons'] = map(hydrate_add_ons, obj['subscription_add_ons'])
@@ -471,12 +492,12 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         uri_out = super(SubscriptionsEndpoint, self).uris(obj)
         pseudo_account_object = {}
         pseudo_account_object[AccountsEndpoint.pk_attr] = obj['account']
-        uri_out['account_uri'] = AccountsEndpoint().get_object_uri(pseudo_account_object)
+        uri_out['account_uri'] = accounts_endpoint.get_object_uri(pseudo_account_object)
         if 'invoice' in obj:
             pseudo_invoice_object = {}
             pseudo_invoice_object[InvoicesEndpoint.pk_attr] = obj['invoice']
-            uri_out['invoice_uri'] = InvoicesEndpoint().get_object_uri(pseudo_invoice_object)
-        uri_out['plan_uri'] = PlansEndpoint().get_object_uri(obj['plan'])
+            uri_out['invoice_uri'] = invoices_endpoint.get_object_uri(pseudo_invoice_object)
+        uri_out['plan_uri'] = plans_endpoint.get_object_uri(obj['plan'])
         uri_out['cancel_uri'] = uri_out['object_uri'] + '/cancel'
         uri_out['terminate_uri'] = uri_out['object_uri'] + '/terminate'
         return uri_out
@@ -484,9 +505,9 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
         account_code = create_info['account'][AccountsEndpoint.pk_attr]
         if not AccountsEndpoint.backend.has_object(account_code):
-            AccountsEndpoint().create(create_info['account'])
+            accounts_endpoint.create(create_info['account'])
         else:
-            AccountsEndpoint().update(create_info['account'])
+            accounts_endpoint.update(create_info['account'])
         create_info['account'] = account_code
 
         assert plans_backend.has_object(create_info['plan_code'])
@@ -538,7 +559,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         # If there are addons, make sure they exist in the system
         if 'subscription_add_ons' in create_info:
             for add_on in create_info['subscription_add_ons']:
-                add_on_uuid = PlansEndpoint().generate_plan_add_on_uuid(create_info['plan_code'], add_on['add_on_code'])
+                add_on_uuid = plans_endpoint.generate_plan_add_on_uuid(create_info['plan_code'], add_on['add_on_code'])
                 assert plan_add_ons_backend.has_object(add_on_uuid)
             create_info['subscription_add_ons'] = [add_on['add_on_code'] for add_on in create_info['subscription_add_ons']]
 
@@ -558,7 +579,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             new_transaction['account'][AccountsEndpoint.pk_attr] = new_sub['account']
             new_transaction['amount_in_cents'] = new_sub['unit_amount_in_cents'] # TODO calculate total charge
             new_transaction['currency'] = new_sub['currency']
-            new_transaction = TransactionsEndpoint().create(new_transaction, format=BaseRecurlyEndpoint.RAW)
+            new_transaction = transactions_endpoint.create(new_transaction, format=BaseRecurlyEndpoint.RAW)
             new_invoice_id = new_transaction['invoice']
 
             # Create new adjustments for the sub to track line items
@@ -571,7 +592,6 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
                         'quantity': new_sub['quantity'],
                         'invoice': new_invoice_id
                     }
-            adjustments_endpoint = AdjustmentsEndpoint()
             plan_charge_line_item = adjustments_endpoint.create(plan_charge_line_item, format=BaseRecurlyEndpoint.RAW)
             adjustments.append(plan_charge_line_item[AdjustmentsEndpoint.pk_attr])
 
@@ -593,3 +613,18 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
 
             new_sub = SubscriptionsEndpoint.backend.update_object(defaults['uuid'], {'invoice': new_invoice_id})
         return self.serialize(new_sub, format=format)
+
+accounts_endpoint = AccountsEndpoint()
+adjustments_endpoint = AdjustmentsEndpoint()
+transactions_endpoint = TransactionsEndpoint()
+coupons_endpoint = CouponsEndpoint()
+invoices_endpoint = InvoicesEndpoint()
+plans_endpoint = PlansEndpoint()
+subscriptions_endpoint = SubscriptionsEndpoint()
+endpoints = [accounts_endpoint,
+        adjustments_endpoint,
+        transactions_endpoint,
+        coupons_endpoint,
+        invoices_endpoint,
+        plans_endpoint,
+        subscriptions_endpoint]

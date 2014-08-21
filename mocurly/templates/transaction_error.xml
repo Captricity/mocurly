@@ -1,0 +1,6 @@
+<transaction_error>
+    <error_code>{{ transaction_error.error_code }}</error_code>
+    <error_category>{{ transaction_error.error_category }}</error_category>
+    <merchant_message>{{ transaction_error.merchant }}</merchant_message>
+    <customer_message>{{ transaction_error.customer }}</customer_message>
+</transaction_error>
