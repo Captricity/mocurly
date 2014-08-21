@@ -12,8 +12,8 @@ class BaseBackend(object):
         self.datastore[uuid] = obj.copy()
         return obj
 
-    def list_objects(self):
-        return [v.copy() for v in self.datastore.values()]
+    def list_objects(self, filter_pred=lambda x: True):
+        return filter(filter_pred, [v.copy() for v in self.datastore.values()])
 
     def get_object(self, uuid):
         return self.datastore[uuid].copy()

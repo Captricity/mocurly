@@ -107,3 +107,24 @@ class TestTransaction(unittest.TestCase):
                 self.assertEqual(voided_transaction[k], 'void') # is now voided
             else:
                 self.assertEqual(voided_transaction[k], v)
+
+    def test_transaction_list(self):
+        self.base_transaction_data['uuid'] = '1234'
+        self.base_transaction_data['account'] = self.base_account_data['uuid']
+        self.base_transaction_data['test'] = True
+        self.base_transaction_data['voidable'] = True
+        self.base_transaction_data['refundable'] = True
+        self.base_transaction_data['tax_in_cents'] = 0
+        self.base_transaction_data['action'] = 'purchase'
+        self.base_transaction_data['status'] = 'success'
+        self.base_transaction_data['created_at'] = '2014-08-11'
+        mocurly.backend.transactions_backend.add_object('1234', self.base_transaction_data)
+
+        self.base_transaction_data['uuid'] = 'abcd'
+        mocurly.backend.transactions_backend.add_object('abcd', self.base_transaction_data)
+
+        acc = recurly.Account.get(self.base_account_data['uuid'])
+        transactions = acc.transactions()
+        self.assertEqual(len(transactions), 2)
+        self.assertEqual(set([transaction.uuid for transaction in transactions]), set(['1234', 'abcd']))
+

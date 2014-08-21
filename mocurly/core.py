@@ -8,11 +8,12 @@ jinja2_env = Environment(loader=PackageLoader('mocurly', 'templates'), extension
 
 from .backend import clear_backends
 
-def details_route(method, uri):
+def details_route(method, uri, is_list=False):
     def details_route_decorator(func):
         func.is_route = True
         func.method = method
         func.uri = uri
+        func.is_list = is_list
         return func
     return details_route_decorator
 
@@ -154,6 +155,9 @@ class mocurly(object):
                         result = method(pk, deserialize(request.body)[1])
                     else:
                         result = method(pk)
+                    if method.is_list:
+                        headers['X-Records'] = result[1]
+                        result = result[0]
                     return status, headers, result
                 if method.method == 'DELETE':
                     HTTPretty.register_uri(method.method, uri_re, body=callback)

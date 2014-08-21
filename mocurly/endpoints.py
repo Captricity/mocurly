@@ -124,6 +124,10 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
     def delete_billing_info(self, pk):
         billing_info_backend.delete_object(pk)
 
+    @details_route('GET', 'transactions', is_list=True)
+    def get_transaction_list(self, pk):
+        return TransactionsEndpoint().serialize(TransactionsEndpoint.backend.list_objects(lambda transaction: transaction['account'] == pk))
+
 class TransactionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'transactions'
     backend = transactions_backend
