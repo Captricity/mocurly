@@ -301,6 +301,8 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
                 transaction['uris'] = TransactionsEndpoint().uris(transaction)
         if 'line_items' in obj:
             obj['line_items'] = [AdjustmentsEndpoint.backend.get_object(adjustment_id) if isinstance(adjustment_id, six.string_types) else adjustment_id for adjustment_id in obj['line_items']]
+            for adjustment in obj['line_items']:
+                adjustment['uris'] = AdjustmentsEndpoint().uris(adjustment)
         return obj
 
     def uris(self, obj):
