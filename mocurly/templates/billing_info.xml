@@ -1,93 +1,93 @@
 <billing_info href="{{ billing_info.uris.object_uri }}" type="credit_card">
-  <account href="{{ billing_info.uris.account_uri }}"/>
-  {% if billing_info.first_name %}
-    <first_name>{{ billing_info.first_name }}</first_name>
-  {% else %}
-    <first_name nil="nil"></first_name>
-  {% endif %}
-  {% if billing_info.last_name %}
-    <last_name>{{ billing_info.last_name }}</last_name>
-  {% else %}
-    <last_name nil="nil"></last_name>
-  {% endif %}
-  {% if billing_info.company %}
-    <company>{{ billing_info.company }}</company>
-  {% else %}
-    <company nil="nil"></company>
-  {% endif %}
-  {% if billing_info.address1 %}
-    <address1>{{ billing_info.address1 }}</address1>
-  {% else %}
-    <address1 nil="nil"></address1>
-  {% endif %}
-  {% if billing_info.address2 %}
-    <address2>{{ billing_info.address2 }}</address2>
-  {% else %}
-    <address2 nil="nil"></address2>
-  {% endif %}
-  {% if billing_info.city %}
-    <city>{{ billing_info.city }}</city>
-  {% else %}
-    <city nil="nil"></city>
-  {% endif %}
-  {% if billing_info.state %}
-    <state>{{ billing_info.state }}</state>
-  {% else %}
-    <state nil="nil"></state>
-  {% endif %}
-  {% if billing_info.zip %}
-    <zip>{{ billing_info.zip }}</zip>
-  {% else %}
-    <zip nil="nil"></zip>
-  {% endif %}
-  {% if billing_info.country %}
-    <country>{{ billing_info.country }}</country>
-  {% else %}
-    <country nil="nil"></country>
-  {% endif %}
-  {% if billing_info.phone %}
-    <phone>{{ billing_info.phone }}</phone>
-  {% else %}
-    <phone nil="nil"></phone>
-  {% endif %}
-  {% if billing_info.vat_number %}
-    <vat_number>{{ billing_info.vat_number }}</vat_number>
-  {% else %}
-    <vat_number nil="nil"></vat_number>
-  {% endif %}
-  {% if billing_info.ip_address %}
-    <ip_address>{{ billing_info.ip_address }}</ip_address>
-  {% else %}
-    <ip_address nil="nil"></ip_address>
-  {% endif %}
-  {% if billing_info.ip_address_country %}
-    <ip_address_country>{{ billing_info.ip_address_country }}</ip_address_country>
-  {% else %}
-    <ip_address_country nil="nil"></ip_address_country>
-  {% endif %}
-  {% if billing_info.card_type %}
-    <card_type>{{ billing_info.card_type }}</card_type>
-  {% else %}
-    <card_type nil="nil"></card_type>
-  {% endif %}
-  {% if billing_info.year %}
-    <year type="integer">{{ billing_info.year }}</year>
-  {% else %}
-    <year nil="nil"></year>
-  {% endif %}
-  {% if billing_info.month %}
-    <month type="integer">{{ billing_info.month }}</month>
-  {% else %}
-    <month nil="nil"></month>
-  {% endif %}
-  {% if billing_info.first_six %}
-    <first_six>{{ billing_info.first_six }}</first_six>
-  {% else %}
-    <first_six nil="nil"></first_six>
-  {% endif %}
-  {% if billing_info.last_four %}
-    <last_four>{{ billing_info.last_four }}</last_four>
-  {% else %}
-    <last_four nil="nil"></last_four>
-  {% endif %}
+    <account href="{{ billing_info.uris.account_uri }}"/>
+    {% if billing_info.first_name %}
+        <first_name>{{ billing_info.first_name }}</first_name>
+    {% else %}
+        <first_name nil="nil"></first_name>
+    {% endif %}
+    {% if billing_info.last_name %}
+        <last_name>{{ billing_info.last_name }}</last_name>
+    {% else %}
+        <last_name nil="nil"></last_name>
+    {% endif %}
+    {% if billing_info.company %}
+        <company>{{ billing_info.company }}</company>
+    {% else %}
+        <company nil="nil"></company>
+    {% endif %}
+    {% if billing_info.address1 %}
+        <address1>{{ billing_info.address1 }}</address1>
+    {% else %}
+        <address1 nil="nil"></address1>
+    {% endif %}
+    {% if billing_info.address2 %}
+        <address2>{{ billing_info.address2 }}</address2>
+    {% else %}
+        <address2 nil="nil"></address2>
+    {% endif %}
+    {% if billing_info.city %}
+        <city>{{ billing_info.city }}</city>
+    {% else %}
+        <city nil="nil"></city>
+    {% endif %}
+    {% if billing_info.state %}
+        <state>{{ billing_info.state }}</state>
+    {% else %}
+        <state nil="nil"></state>
+    {% endif %}
+    {% if billing_info.zip %}
+        <zip>{{ billing_info.zip }}</zip>
+    {% else %}
+        <zip nil="nil"></zip>
+    {% endif %}
+    {% if billing_info.country %}
+        <country>{{ billing_info.country }}</country>
+    {% else %}
+        <country nil="nil"></country>
+    {% endif %}
+    {% if billing_info.phone %}
+        <phone>{{ billing_info.phone }}</phone>
+    {% else %}
+        <phone nil="nil"></phone>
+    {% endif %}
+    {% if billing_info.vat_number %}
+        <vat_number>{{ billing_info.vat_number }}</vat_number>
+    {% else %}
+        <vat_number nil="nil"></vat_number>
+    {% endif %}
+    {% if billing_info.ip_address %}
+        <ip_address>{{ billing_info.ip_address }}</ip_address>
+    {% else %}
+        <ip_address nil="nil"></ip_address>
+    {% endif %}
+    {% if billing_info.ip_address_country %}
+        <ip_address_country>{{ billing_info.ip_address_country }}</ip_address_country>
+    {% else %}
+        <ip_address_country nil="nil"></ip_address_country>
+    {% endif %}
+    {% if billing_info.card_type %}
+        <card_type>{{ billing_info.card_type }}</card_type>
+    {% else %}
+        <card_type nil="nil"></card_type>
+    {% endif %}
+    {% if billing_info.year %}
+        <year type="integer">{{ billing_info.year }}</year>
+    {% else %}
+        <year nil="nil"></year>
+    {% endif %}
+    {% if billing_info.month %}
+        <month type="integer">{{ billing_info.month }}</month>
+    {% else %}
+        <month nil="nil"></month>
+    {% endif %}
+    {% if billing_info.first_six %}
+        <first_six>{{ billing_info.first_six }}</first_six>
+    {% else %}
+        <first_six nil="nil"></first_six>
+    {% endif %}
+    {% if billing_info.last_four %}
+        <last_four>{{ billing_info.last_four }}</last_four>
+    {% else %}
+        <last_four nil="nil"></last_four>
+    {% endif %}
 </billing_info>

@@ -6,7 +6,7 @@ import string
 import dateutil.relativedelta
 import dateutil.parser
 
-from .core import details_route, serialize
+from .core import details_route, serialize, serialize_list
 from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, subscription_addons_backend
 
 class BaseRecurlyEndpoint(object):
@@ -27,11 +27,17 @@ class BaseRecurlyEndpoint(object):
 
     def serialize(self, obj):
         cls = self.__class__
-        obj['uris'] = self.uris(obj)
-        return serialize(cls.template, cls.object_type, obj)
+        if type(obj) == list:
+            for o in obj:
+                o['uris'] = self.uris(o)
+            return serialize_list(cls.template, cls.object_type_plural, cls.object_type, obj)
+        else:
+            obj['uris'] = self.uris(obj)
+            return serialize(cls.template, cls.object_type, obj)
 
     def list(self):
-        raise NotImplementedError
+        cls = self.__class__
+        return self.serialize(cls.backend.list_objects())
 
     def create(self, create_info):
         cls = self.__class__
@@ -62,6 +68,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
     pk_attr = 'account_code'
     backend = accounts_backend
     object_type = 'account'
+    object_type_plural = 'accounts'
     template = 'account.xml'
 
     def uris(self, obj):
@@ -121,6 +128,7 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'transactions'
     backend = transactions_backend
     object_type = 'transaction'
+    object_type_plural = 'transactions'
     template = 'transaction.xml'
 
     def hydrate_foreign_keys(self, obj):
@@ -208,6 +216,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
     base_uri = 'invoices'
     backend = invoices_backend
     object_type = 'invoice'
+    object_type_plural = 'invoices'
     pk_attr = 'invoice_number'
     template = 'invoice.xml'
 
@@ -240,6 +249,7 @@ class PlansEndpoint(BaseRecurlyEndpoint):
     backend = plans_backend
     pk_attr = 'plan_code'
     object_type = 'plan'
+    object_type_plural = 'plans'
     template = 'plan.xml'
     defaults = {
         'plan_interval_unit': 'months',
@@ -260,6 +270,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'subscriptions'
     backend = subscriptions_backend
     object_type = 'subscription'
+    object_type_plural = 'subscriptions'
     template = 'subscription.xml'
     defaults = { 'quantity': 1 }
 

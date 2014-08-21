@@ -1,49 +1,49 @@
 <plan href="{{ plan.uris.object_uri }}">
-  <add_ons href="{{ plan.uris.addons_uri }}"/>
-  <plan_code>{{ plan.plan_code }}</plan_code>
-  <name>{{ plan.name }}</name>
-  {% if plan.description %}
-    <description>{{ plan.description }}</description>
-  {% else %}
-    <description nil="nil"></description>
-  {% endif %}
-  {% if plan.success_url %}
-    <success_url>{{ plan.success_url }}</success_url>
-  {% else %}
-    <success_url nil="nil"></success_url>
-  {% endif %}
-  {% if plan.cancel_url %}
-    <cancel_url>{{ plan.cancel_url }}</cancel_url>
-  {% else %}
-    <cancel_url nil="nil"></cancel_url>
-  {% endif %}
-  <display_donation_amounts type="boolean">false</display_donation_amounts>
-  <display_quantity type="boolean">{{ plan.display_quantity }}</display_quantity>
-  <display_phone_number type="boolean">false</display_phone_number>
-  <bypass_hosted_confirmation type="boolean">false</bypass_hosted_confirmation>
-  <unit_name>{{ plan.unit_name }}</unit_name>
-  <payment_page_tos_link nil="nil"></payment_page_tos_link>
-  <plan_interval_length type="integer">{{ plan.plan_interval_length }}</plan_interval_length>
-  <plan_interval_unit>{{ plan.plan_interval_unit }}</plan_interval_unit>
-  <trial_interval_length type="integer">{{ plan.trial_interval_length }}</trial_interval_length>
-  <trial_interval_unit>{{ plan.trial_interval_unit }}</trial_interval_unit>
-  {% if plan.accounting_code %}
-    <accounting_code>{{ plan.accounting_code }}</accounting_code>
-  {% else %}
-    <accounting_code nil="nil"></accounting_code>
-  {% endif %}
-  <created_at type="datetime">{{ plan.created_at }}</created_at>
-  <tax_exempt type="boolean">{% if plan.tax_exempt %}true{% else %}false{% endif %}</tax_exempt>
-  <unit_amount_in_cents>
-    {% for currency, value in plan.unit_amount_in_cents.items() %}
-        <{{ currency }} type="integer">{{ value }}</{{ currency }}>
-    {% endfor %}
-  </unit_amount_in_cents>
-  <setup_fee_in_cents>
-    {% if plan.setup_fee_in_cents %}
-        {% for currency, value in plan.setup_fee_in_cents.items() %}
+    <add_ons href="{{ plan.uris.addons_uri }}"/>
+    <plan_code>{{ plan.plan_code }}</plan_code>
+    <name>{{ plan.name }}</name>
+    {% if plan.description %}
+        <description>{{ plan.description }}</description>
+    {% else %}
+        <description nil="nil"></description>
+    {% endif %}
+    {% if plan.success_url %}
+        <success_url>{{ plan.success_url }}</success_url>
+    {% else %}
+        <success_url nil="nil"></success_url>
+    {% endif %}
+    {% if plan.cancel_url %}
+        <cancel_url>{{ plan.cancel_url }}</cancel_url>
+    {% else %}
+        <cancel_url nil="nil"></cancel_url>
+    {% endif %}
+    <display_donation_amounts type="boolean">false</display_donation_amounts>
+    <display_quantity type="boolean">{{ plan.display_quantity }}</display_quantity>
+    <display_phone_number type="boolean">false</display_phone_number>
+    <bypass_hosted_confirmation type="boolean">false</bypass_hosted_confirmation>
+    <unit_name>{{ plan.unit_name }}</unit_name>
+    <payment_page_tos_link nil="nil"></payment_page_tos_link>
+    <plan_interval_length type="integer">{{ plan.plan_interval_length }}</plan_interval_length>
+    <plan_interval_unit>{{ plan.plan_interval_unit }}</plan_interval_unit>
+    <trial_interval_length type="integer">{{ plan.trial_interval_length }}</trial_interval_length>
+    <trial_interval_unit>{{ plan.trial_interval_unit }}</trial_interval_unit>
+    {% if plan.accounting_code %}
+        <accounting_code>{{ plan.accounting_code }}</accounting_code>
+    {% else %}
+        <accounting_code nil="nil"></accounting_code>
+    {% endif %}
+    <created_at type="datetime">{{ plan.created_at }}</created_at>
+    <tax_exempt type="boolean">{% if plan.tax_exempt %}true{% else %}false{% endif %}</tax_exempt>
+    <unit_amount_in_cents>
+        {% for currency, value in plan.unit_amount_in_cents.items() %}
             <{{ currency }} type="integer">{{ value }}</{{ currency }}>
         {% endfor %}
-    {% endif %}
-  </setup_fee_in_cents>
+    </unit_amount_in_cents>
+    <setup_fee_in_cents>
+        {% if plan.setup_fee_in_cents %}
+            {% for currency, value in plan.setup_fee_in_cents.items() %}
+                <{{ currency }} type="integer">{{ value }}</{{ currency }}>
+            {% endfor %}
+        {% endif %}
+    </setup_fee_in_cents>
 </plan>

@@ -144,3 +144,17 @@ class TestAccount(unittest.TestCase):
             if k in ['uuid', 'uris', 'account']:
                 continue # skip
             self.assertEqual(getattr(billing_info, k), v)
+
+    def test_list_account(self):
+        self.base_account_data['hosted_login_token'] = 'abcd1234'
+        self.base_account_data['created_at'] = '2014-08-11'
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
+        self.base_account_data['account_code'] = 'foo'
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
+        self.base_account_data['account_code'] = 'bar'
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
+
+        accounts = recurly.Account.all()
+
+        self.assertEqual(len(accounts), 3)
+        self.assertEqual(set([account.account_code for account in accounts]), set(['foo', 'bar', 'blah']))

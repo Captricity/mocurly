@@ -16,6 +16,12 @@ def details_route(method, uri):
         return func
     return details_route_decorator
 
+def serialize_list(template, object_type_plural, object_type, object_list):
+    serialized_obj_list = []
+    for obj in object_list:
+        serialized_obj_list.append(serialize(template, object_type, obj))
+    return '<{0} type="array">{1}</{0}>'.format(object_type_plural, ''.join(serialized_obj_list)), len(serialized_obj_list)
+
 def serialize(template, object_type, object_dict):
     # Takes in the object type + dictionary representation and returns the XML
     template = jinja2_env.get_template(template)
@@ -104,7 +110,9 @@ class mocurly(object):
             list_uri = recurly.base_uri() + endpoint.base_uri
 
             def list_callback(request, uri, headers, endpoint=endpoint):
-                return 200, headers, endpoint.list()
+                xml, item_count = endpoint.list()
+                headers['X-Records'] = item_count
+                return 200, headers, xml
             HTTPretty.register_uri(HTTPretty.GET, list_uri, body=list_callback, content_type="application/xml")
 
             def create_callback(request, uri, headers, endpoint=endpoint):
