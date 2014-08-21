@@ -10,6 +10,7 @@ setup(
     author_email='yoriy@captricity.com',
     url='https://github.com/Captricity/mocurly',
     packages=find_packages(exclude=("tests", "tests.*")),
+    package_data={'mocurly': ['templates/*.xml']},
     install_requires=install_requires,
     test_suite = 'tests'
 )
