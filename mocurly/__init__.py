@@ -1,1 +1,1 @@
-import httpretty
+from .core import mocurly
