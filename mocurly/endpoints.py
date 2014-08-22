@@ -57,6 +57,8 @@ class BaseRecurlyEndpoint(object):
 
     def retrieve(self, pk, format=XML):
         cls = self.__class__
+        if not cls.backend.has_object(pk):
+            raise ResponseError(404, '')
         out = cls.backend.get_object(pk)
         return self.serialize(out, format=format)
 

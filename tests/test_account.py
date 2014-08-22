@@ -32,6 +32,9 @@ class TestAccount(unittest.TestCase):
     def tearDown(self):
         self.mocurly_.stop()
 
+    def test_no_account_retrieve(self):
+        self.assertRaises(recurly.NotFoundError, recurly.Account.get, '1234')
+
     def test_simple_account_creation(self):
         self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
 
