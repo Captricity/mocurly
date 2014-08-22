@@ -176,7 +176,10 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         if 'invoice' in obj:
             # To avoid infinite recursion
             uri_out['invoice_uri'] = invoices_endpoint.get_object_uri(obj['invoice'])
-        uri_out['subscription_uri'] = 'TODO'
+        if 'subscription' in obj:
+            pseudo_subscription_object = {}
+            pseudo_subscription_object[SubscriptionsEndpoint.pk_attr] = obj['subscription']
+            uri_out['subscription_uri'] = subscriptions_endpoint.get_object_uri(pseudo_subscription_object)
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
@@ -583,6 +586,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             new_transaction['account'][AccountsEndpoint.pk_attr] = new_sub['account']
             new_transaction['amount_in_cents'] = new_sub['unit_amount_in_cents'] # TODO calculate total charge
             new_transaction['currency'] = new_sub['currency']
+            new_transaction['subscription'] = new_sub[SubscriptionsEndpoint.pk_attr]
             new_transaction = transactions_endpoint.create(new_transaction, format=BaseRecurlyEndpoint.RAW)
             new_invoice_id = new_transaction['invoice']
 
