@@ -35,8 +35,7 @@ class TestAccount(unittest.TestCase):
     def test_simple_account_creation(self):
         self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
 
-        new_account = recurly.Account(**self.base_account_data)
-        new_account.save()
+        recurly.Account(**self.base_account_data).save()
 
         # Verify account object exists in backend
         self.assertTrue(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
@@ -45,6 +44,10 @@ class TestAccount(unittest.TestCase):
             self.assertEqual(new_account[k], v)
         self.assertTrue('hosted_login_token' in new_account) # adds a hosted_login_token by default
         self.assertTrue('created_at' in new_account) # adds a created_at field by default
+
+        # Verify account has no billing info
+        recurly_account = recurly.Account.get(self.base_account_data['account_code'])
+        self.assertRaises(AttributeError, lambda: recurly_account.billing_info)
 
     def test_account_creation_with_address(self):
         self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))

@@ -1,6 +1,8 @@
 <account href="{{ account.uris.object_uri }}">
     <adjustments href="{{ account.uris.adjustments_uri }}"/>
-    <billing_info href="{{ account.uris.billing_info_uri }}"/>
+    {% if account.uris.billing_info_uri %}
+        <billing_info href="{{ account.uris.billing_info_uri }}"/>
+    {% endif %}
     <invoices href="{{ account.uris.invoices_uri }}"/>
     <redemption href="{{ account.uris.redemption_uri }}"/>
     <subscriptions href="{{ account.uris.subscriptions_uri }}"/>

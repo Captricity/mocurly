@@ -83,7 +83,8 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
     def uris(self, obj):
         uri_out = super(AccountsEndpoint, self).uris(obj)
         uri_out['adjustments_uri'] = uri_out['object_uri'] + '/adjustments'
-        uri_out['billing_info_uri'] = uri_out['object_uri'] + '/billing_info'
+        if billing_info_backend.has_object(obj[AccountsEndpoint.pk_attr]):
+            uri_out['billing_info_uri'] = uri_out['object_uri'] + '/billing_info'
         uri_out['invoices_uri'] = uri_out['object_uri'] + '/invoices'
         uri_out['redemption_uri'] = uri_out['object_uri'] + '/redemption'
         uri_out['subscriptions_uri'] = uri_out['object_uri'] + '/subscriptions'
