@@ -34,6 +34,8 @@ class TestSubscriptions(unittest.TestCase):
                 'hosted_login_token': 'abcd1234',
                 'created_at': '2014-08-11'
             }
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['uuid'], self.base_account_data)
+        mocurly.backend.billing_info_backend.add_object(self.base_billing_info_data['uuid'], self.base_billing_info_data)
 
         self.base_plan_data = {
                 'plan_code': 'gold',
@@ -116,10 +118,15 @@ class TestSubscriptions(unittest.TestCase):
 
         # Make sure a new transaction and invoice was created with it
         invoice = new_subscription.invoice()
-        self.assertTrue(invoice is not None)
         transactions = invoice.transactions
         self.assertEqual(len(transactions), 1)
         self.assertEqual(transactions[0].subscription().uuid, new_subscription.uuid)
+
+        # Make sure we can reference the subscription from the account
+        account = new_subscription.account()
+        account_subscriptions = account.subscriptions()
+        self.assertEqual(len(account_subscriptions), 1)
+        self.assertEqual(account_subscriptions[0].uuid, new_subscription.uuid)
 
     def test_subscriptions_with_addons(self):
         # add a sample plan to the plans backend
@@ -136,3 +143,36 @@ class TestSubscriptions(unittest.TestCase):
         new_subscription.save()
 
         self.assertEqual(len(mocurly.backend.subscriptions_backend.datastore), 1)
+
+    def test_subscription_filtering(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+        # add multiple subscriptions in different states
+        self.base_subscription_data['uuid'] = 'foo'
+        self.base_subscription_data['account'] = self.base_account_data['account_code']
+        self.base_subscription_data['state'] = 'active'
+        mocurly.backend.subscriptions_backend.add_object('foo', self.base_subscription_data)
+        self.base_subscription_data['uuid'] = 'bar'
+        self.base_subscription_data['state'] = 'future'
+        mocurly.backend.subscriptions_backend.add_object('bar', self.base_subscription_data)
+        for i in range(5):
+            self.base_subscription_data['uuid'] = str(i)
+            self.base_subscription_data['state'] = 'expired'
+            mocurly.backend.subscriptions_backend.add_object(str(i), self.base_subscription_data)
+
+        account = recurly.Account.get(self.base_account_data['account_code'])
+        active_subscriptions = account.subscriptions(state='active')
+        self.assertEqual(len(active_subscriptions), 1)
+        self.assertEqual(active_subscriptions[0].uuid, 'foo')
+
+        future_subscriptions = account.subscriptions(state='future')
+        self.assertEqual(len(future_subscriptions), 1)
+        self.assertEqual(future_subscriptions[0].uuid, 'bar')
+
+        live_subscriptions = account.subscriptions(state='live')
+        self.assertEqual(len(live_subscriptions), 2)
+        self.assertEqual(set(['foo', 'bar']), set([sub.uuid for sub in live_subscriptions]))
+
+        expired_subscriptions = account.subscriptions(state='expired')
+        self.assertEqual(len(expired_subscriptions), 5)
+        self.assertEqual(set(range(5)), set([int(sub.uuid) for sub in expired_subscriptions]))

@@ -186,11 +186,12 @@ class mocurly(object):
                         status = 200
                     if request.method in ['POST', 'PUT']:
                         result = method(pk, deserialize(request.body)[1])
-                    else:
-                        result = method(pk)
-                    if method.is_list:
+                    elif method.is_list:
+                        result = method(pk, filters=request.querystring)
                         headers['X-Records'] = result[1]
                         result = result[0]
+                    else:
+                        result = method(pk)
                     return status, headers, result
                 if method.method == 'DELETE':
                     HTTPretty.register_uri(method.method, uri_re, body=callback(self)(extra_route_callback))

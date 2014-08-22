@@ -139,9 +139,22 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         billing_info_backend.delete_object(pk)
 
     @details_route('GET', 'transactions', is_list=True)
-    def get_transaction_list(self, pk, format=BaseRecurlyEndpoint.XML):
+    def get_transactions_list(self, pk, filters=None, format=BaseRecurlyEndpoint.XML):
         out = TransactionsEndpoint.backend.list_objects(lambda transaction: transaction['account'] == pk)
         return transactions_endpoint.serialize(out, format=format)
+
+    @details_route('GET', 'subscriptions', is_list=True)
+    def get_subscriptions_list(self, pk, filters=None, format=BaseRecurlyEndpoint.XML):
+        def filter_subscriptions(subscription):
+            if filters:
+                if 'state' in filters and filters['state'][0] == 'live':
+                    filters['state'] = ['active', 'canceled', 'future', 'in_trial']
+                cond = all(subscription[k] in v for k, v in filters.items())
+            else:
+                cond = True
+            return subscription['account'] == pk and cond
+        out = SubscriptionsEndpoint.backend.list_objects(filter_subscriptions)
+        return subscriptions_endpoint.serialize(out, format=format)
 
 class TransactionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'transactions'
@@ -454,7 +467,7 @@ class PlansEndpoint(BaseRecurlyEndpoint):
             return serialize('add_on.xml', 'add_on', obj)
 
     @details_route('GET', 'add_ons', is_list=True)
-    def get_add_on_list(self, pk, format=BaseRecurlyEndpoint.XML):
+    def get_add_on_list(self, pk, filters=None, format=BaseRecurlyEndpoint.XML):
         out = plan_add_ons_backend.list_objects(lambda add_on: add_on['plan'] == pk)
         return self.serialize_plan_add_on(out, format=format)
 
