@@ -3,7 +3,9 @@
     {% if transaction.uris.invoice_uri %}
         <invoice href="{{ transaction.uris.invoice_uri }}"/>
     {% endif %}
-    <subscription href="{{ transaction.uris.subscription_uri }}"/>
+    {% if transaction.uris.subscription_uri %}
+        <subscription href="{{ transaction.uris.subscription_uri }}"/>
+    {% endif %}
     <uuid>{{ transaction.uuid }}</uuid>
     <action>{{ transaction.action }}</action>
     <amount_in_cents type="integer">{{ transaction.amount_in_cents }}</amount_in_cents>
