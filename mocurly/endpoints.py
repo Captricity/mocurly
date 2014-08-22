@@ -247,9 +247,10 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
             if amount_in_cents is not None:
                 refund_transaction['amount_in_cents'] = amount_in_cents
             TransactionsEndpoint.backend.add_object(refund_transaction['uuid'], refund_transaction)
+            TransactionsEndpoint.backend.update_object(transaction['uuid'], {'refundable': False}) # Refunded, so now its no longer refundable
 
             invoice = InvoicesEndpoint.backend.get_object(transaction['invoice'])
-            InvoicesEndpoint.backend.update_object(transaction['invoice'], {'transactions': invoice['transactions'].append(refund_transaction['uuid'])})
+            InvoicesEndpoint.backend.update_object(transaction['invoice'], {'transactions': invoice['transactions']+[refund_transaction['uuid']]})
         else:
             # TODO: raise exception - transaction cannot be refunded
             pass
