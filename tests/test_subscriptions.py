@@ -116,7 +116,7 @@ class TestSubscriptions(unittest.TestCase):
 
         # Make sure a new transaction and invoice was created with it
         invoice = new_subscription.invoice()
-        self.assertIsNotNone(invoice)
+        self.assertTrue(invoice is not None)
         transactions = invoice.transactions
         self.assertEqual(len(transactions), 1)
         self.assertEqual(transactions[0].subscription().uuid, new_subscription.uuid)
