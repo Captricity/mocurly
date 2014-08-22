@@ -473,7 +473,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
 
     def _calculate_timedelta(self, units, length):
         timedelta_info = {}
-        timedelta_info[units] = length
+        timedelta_info[units] = int(length)
         return dateutil.relativedelta.relativedelta(**timedelta_info)
 
     def _parse_isoformat(self, isoformat):
