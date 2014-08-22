@@ -185,7 +185,10 @@ class mocurly(object):
                     else:
                         status = 200
                     if request.method in ['POST', 'PUT']:
-                        result = method(pk, deserialize(request.body)[1])
+                        post_data = request.querystring.copy()
+                        if request.body:
+                            post_data.update(deserialize(request.body)[1])
+                        result = method(pk, post_data)
                     elif method.is_list:
                         result = method(pk, filters=request.querystring)
                         headers['X-Records'] = result[1]

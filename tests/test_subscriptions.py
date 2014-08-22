@@ -176,3 +176,32 @@ class TestSubscriptions(unittest.TestCase):
         expired_subscriptions = account.subscriptions(state='expired')
         self.assertEqual(len(expired_subscriptions), 5)
         self.assertEqual(set(range(5)), set([int(sub.uuid) for sub in expired_subscriptions]))
+
+    def test_subscription_termination_full_refund(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+        # add an active subscription
+        new_subscription = recurly.Subscription(**self.base_subscription_data)
+        new_subscription.save()
+        self.assertEqual(new_subscription.state, 'active')
+
+        # Now terminate it with a full refund
+        new_subscription.terminate(refund='full')
+        
+        self.assertEqual(new_subscription.state, 'expired')
+        invoice = new_subscription.invoice()
+        transactions = invoice.transactions
+        self.assertEqual(len(transactions), 1)
+        self.assertEqual(transactions[0].status, 'void')
+
+    def test_subscription_cancel(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+        # add an active subscription
+        new_subscription = recurly.Subscription(**self.base_subscription_data)
+        new_subscription.save()
+        self.assertEqual(new_subscription.state, 'active')
+
+        # now cancel it and verify it was canceled
+        new_subscription.cancel()
+        self.assertEqual(new_subscription.state, 'canceled')

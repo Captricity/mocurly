@@ -635,6 +635,40 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             new_sub = SubscriptionsEndpoint.backend.update_object(defaults['uuid'], {'invoice': new_invoice_id})
         return self.serialize(new_sub, format=format)
 
+    @details_route('PUT', 'terminate')
+    def terminate_subscription(self, pk, terminate_info, format=format):
+        subscription = SubscriptionsEndpoint.backend.get_object(pk)
+        # assume base transaction exists
+        transaction = TransactionsEndpoint.backend.list_objects(lambda trans: trans['subscription'] == subscription[SubscriptionsEndpoint.pk_attr])[0]
+        start = self._parse_isoformat(subscription['current_period_started_at'])
+        end = self._parse_isoformat(subscription['current_period_ends_at'])
+        now = datetime.datetime.utcnow()
+        refund_type = terminate_info['refund'][0]
+        if refund_type == 'partial':
+            if now > end:
+                now = end
+            days_left = (end - now).days
+            total_days = (end - start).days
+            refund_amount = int((days_left / total_days) * transaction['amount_in_cents'])
+            transactions_endpoint.delete(transaction[TransactionsEndpoint.pk_attr], amount_in_cents=refund_amount)
+        elif refund_type == 'full':
+            transactions_endpoint.delete(transaction[TransactionsEndpoint.pk_attr])
+
+        return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
+                'state': 'expired',
+                'expires_at': datetime.datetime.now().isoformat(),
+                'current_period_ends_at': datetime.datetime.now().isoformat()
+            }), format=format)
+
+    @details_route('PUT', 'cancel')
+    def cancel_subscription(self, pk, cancel_info, format=format):
+        subscription = SubscriptionsEndpoint.backend.get_object(pk)
+        return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
+                'state': 'canceled',
+                'expires_at': subscription['current_period_ends_at'],
+                'canceled_at': datetime.datetime.now().isoformat()
+            }), format=format)
+
 accounts_endpoint = AccountsEndpoint()
 adjustments_endpoint = AdjustmentsEndpoint()
 transactions_endpoint = TransactionsEndpoint()
