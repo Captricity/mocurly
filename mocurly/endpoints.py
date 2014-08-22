@@ -1,4 +1,3 @@
-import datetime
 import recurly
 import six
 import random
@@ -6,8 +5,9 @@ import string
 import dateutil.relativedelta
 import dateutil.parser
 
+from .utils import current_time
 from .errors import TRANSACTION_ERRORS, ResponseError
-from .core import details_route, serialize, serialize_list, deserialize
+from .core import details_route, serialize, serialize_list
 from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, plan_add_ons_backend, adjustments_backend, coupons_backend, coupon_redemptions_backend
 
 class BaseRecurlyEndpoint(object):
@@ -97,7 +97,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
             billing_info_backend.add_object(create_info[AccountsEndpoint.pk_attr], billing_info)
             del create_info['billing_info']
         create_info['hosted_login_token'] = self.generate_id()
-        create_info['created_at'] = datetime.datetime.now().isoformat()
+        create_info['created_at'] = current_time().isoformat()
         return super(AccountsEndpoint, self).create(create_info, format=format)
 
     def update(self, pk, update_info, format=BaseRecurlyEndpoint.XML):
@@ -211,7 +211,7 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         create_info['test'] = True
         create_info['voidable'] = True
         create_info['refundable'] = True
-        create_info['created_at'] = datetime.datetime.now().isoformat()
+        create_info['created_at'] = current_time().isoformat()
 
         # Check to see if we need to throw an error for card failure
         if create_info['account'] in self.registered_errors:
@@ -300,7 +300,7 @@ class AdjustmentsEndpoint(BaseRecurlyEndpoint):
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
-        create_info['created_at'] = create_info['start_date'] = datetime.datetime.now().isoformat()
+        create_info['created_at'] = create_info['start_date'] = current_time().isoformat()
         if int(create_info['unit_amount_in_cents']) >= 0:
             create_info['type'] = 'charge'
         else:
@@ -418,7 +418,7 @@ class CouponsEndpoint(BaseRecurlyEndpoint):
     def redeem_coupon(self, pk, redeem_info, format=BaseRecurlyEndpoint.XML):
         assert CouponsEndpoint.backend.has_object(pk)
         redeem_info['coupon'] = pk
-        redeem_info['created_at'] = datetime.datetime.now().isoformat()
+        redeem_info['created_at'] = current_time().isoformat()
         return self.serialize_coupon_redemption(coupon_redemptions_backend.add_object(self.generate_coupon_redemption_uuid(pk, redeem_info['account_code']), redeem_info), format=format)
 
 class PlansEndpoint(BaseRecurlyEndpoint):
@@ -447,7 +447,7 @@ class PlansEndpoint(BaseRecurlyEndpoint):
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
-        create_info['created_at'] = datetime.datetime.now().isoformat()
+        create_info['created_at'] = current_time().isoformat()
         defaults = PlansEndpoint.defaults.copy()
         defaults.update(create_info)
         return super(PlansEndpoint, self).create(defaults, format)
@@ -484,7 +484,7 @@ class PlansEndpoint(BaseRecurlyEndpoint):
     def create_add_on(self, pk, create_info, format=BaseRecurlyEndpoint.XML):
         assert PlansEndpoint.backend.has_object(pk)
         create_info['plan'] = pk
-        create_info['created_at'] = datetime.datetime.now().isoformat()
+        create_info['created_at'] = current_time().isoformat()
         if 'accounting_code' not in create_info:
             create_info['accounting_code'] = create_info['add_on_code']
         return self.serialize_plan_add_on(plan_add_ons_backend.add_object(self.generate_plan_add_on_uuid(pk, create_info['add_on_code']), create_info), format=format)
@@ -542,7 +542,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         assert plans_backend.has_object(create_info['plan_code'])
         plan = plans_backend.get_object(create_info['plan_code'])
 
-        now = datetime.datetime.now()
+        now = current_time()
 
         # Trial dates need to be calculated
         if 'trial_ends_at' in create_info:
@@ -651,7 +651,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         transaction = TransactionsEndpoint.backend.list_objects(lambda trans: trans['subscription'] == subscription[SubscriptionsEndpoint.pk_attr])[0]
         start = self._parse_isoformat(subscription['current_period_started_at'])
         end = self._parse_isoformat(subscription['current_period_ends_at'])
-        now = datetime.datetime.utcnow()
+        now = current_time()
         refund_type = terminate_info['refund'][0]
         if refund_type == 'partial':
             if now > end:
@@ -665,8 +665,8 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
 
         return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
                 'state': 'expired',
-                'expires_at': datetime.datetime.now().isoformat(),
-                'current_period_ends_at': datetime.datetime.now().isoformat()
+                'expires_at': now.isoformat(),
+                'current_period_ends_at': now.isoformat()
             }), format=format)
 
     @details_route('PUT', 'cancel')
@@ -675,7 +675,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
                 'state': 'canceled',
                 'expires_at': subscription['current_period_ends_at'],
-                'canceled_at': datetime.datetime.now().isoformat()
+                'canceled_at': current_time().isoformat()
             }), format=format)
 
 accounts_endpoint = AccountsEndpoint()
