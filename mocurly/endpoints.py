@@ -111,6 +111,10 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
             del update_info['billing_info']
         return super(AccountsEndpoint, self).update(pk, update_info, format=format)
 
+    def delete(self, pk):
+        AccountsEndpoint.backend.update_object(pk, {'state': 'closed'})
+        billing_info_backend.delete_object(pk)
+
     def billing_info_uris(self, obj):
         uri_out = {}
         uri_out['account_uri'] = recurly.base_uri() + AccountsEndpoint.base_uri + '/' + obj['account']
