@@ -98,7 +98,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
             del create_info['billing_info']
         create_info['hosted_login_token'] = self.generate_id()
         create_info['created_at'] = datetime.datetime.now().isoformat()
-        return super(AccountsEndpoint, self).create(create_info, format)
+        return super(AccountsEndpoint, self).create(create_info, format=format)
 
     def update(self, pk, update_info, format=BaseRecurlyEndpoint.XML):
         if 'billing_info' in update_info:
@@ -109,7 +109,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
                 updated_billing_info['account'] = pk
                 billing_info_backend.add_object(pk, updated_billing_info)
             del update_info['billing_info']
-        return super(AccountsEndpoint, self).update(pk, update_info, format)
+        return super(AccountsEndpoint, self).update(pk, update_info, format=format)
 
     def billing_info_uris(self, obj):
         uri_out = {}
