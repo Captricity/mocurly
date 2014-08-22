@@ -513,7 +513,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     object_type = 'subscription'
     object_type_plural = 'subscriptions'
     template = 'subscription.xml'
-    defaults = { 'quantity': 1 }
+    defaults = { 'quantity': 1, 'collection_method': 'automatic' }
 
     def _calculate_timedelta(self, units, length):
         timedelta_info = {}
