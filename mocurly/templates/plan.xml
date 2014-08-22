@@ -1,5 +1,5 @@
 <plan href="{{ plan.uris.object_uri }}">
-    <add_ons href="{{ plan.uris.addons_uri }}"/>
+    <add_ons href="{{ plan.uris.add_ons_uri }}"/>
     <plan_code>{{ plan.plan_code }}</plan_code>
     <name>{{ plan.name }}</name>
     {% if plan.description %}

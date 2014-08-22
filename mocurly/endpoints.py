@@ -437,6 +437,11 @@ class PlansEndpoint(BaseRecurlyEndpoint):
         'display_quantity_on_hosted_page': False
     }
 
+    def uris(self, obj):
+        uri_out = super(PlansEndpoint, self).uris(obj)
+        uri_out['add_ons_uri'] = uri_out['object_uri'] + '/add_ons'
+        return uri_out
+
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
         create_info['created_at'] = datetime.datetime.now().isoformat()
         defaults = PlansEndpoint.defaults.copy()
@@ -451,7 +456,7 @@ class PlansEndpoint(BaseRecurlyEndpoint):
         pseudo_plan_object = {}
         pseudo_plan_object[PlansEndpoint.pk_attr] = obj['plan']
         uri_out['plan_uri'] = plans_endpoint.get_object_uri(pseudo_plan_object)
-        uri_out['object_uri'] = uri_out['plan_uri'] + '/add_ons/' + obj['uuid']
+        uri_out['object_uri'] = uri_out['plan_uri'] + '/add_ons/' + obj['add_on_code']
         return uri_out
 
     def serialize_plan_add_on(self, obj, format=BaseRecurlyEndpoint.XML):

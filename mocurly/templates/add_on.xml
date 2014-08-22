@@ -5,7 +5,7 @@
     <display_quantity_on_hosted_page type="boolean">{% if add_on.display_quantity_on_hosted_page %}true{% else %}false{% endif %}</display_quantity_on_hosted_page>
     <default_quantity type="integer">{{ add_on.default_quantity }}</default_quantity>
     <unit_amount_in_cents>
-        {% for currency, value in plan.unit_amount_in_cents.items() %}
+        {% for currency, value in add_on.unit_amount_in_cents.items() %}
             <{{ currency }} type="integer">{{ value }}</{{ currency }}>
         {% endfor %}
     </unit_amount_in_cents>

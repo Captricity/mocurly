@@ -91,6 +91,39 @@ class TestSubscriptions(unittest.TestCase):
     def tearDown(self):
         self.mocurly_.stop()
 
+    def test_simple_plan_add_on_creation(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+
+        self.assertEqual(len(mocurly.backend.plan_add_ons_backend.datastore), 0)
+
+        # now create some addons
+        plan = recurly.Plan.get(self.base_backed_plan_data['plan_code'])
+        for add_on in self.base_add_on_data:
+            add_on['name'] = add_on['add_on_code'].upper()
+            add_on['unit_amount_in_cents'] = recurly.Money(**add_on['unit_amount_in_cents'])
+            plan.create_add_on(recurly.AddOn(**add_on))
+
+        self.assertEqual(len(mocurly.backend.plan_add_ons_backend.datastore), 2)
+        foo_add_on_backed = mocurly.backend.plan_add_ons_backend.get_object(self.base_backed_plan_data['plan_code'] + '__foo')
+        foo_add_on = filter(lambda add_on: add_on['add_on_code'] == 'foo', self.base_add_on_data)[0]
+        for k, v in foo_add_on.items():
+            if k == 'unit_amount_in_cents':
+                self.assertEqual(foo_add_on_backed[k], dict((curr, str(amt)) for curr, amt in v.currencies.items()))
+            else:
+                self.assertEqual(foo_add_on_backed[k], v)
+
+        bar_add_on_backed = mocurly.backend.plan_add_ons_backend.get_object(self.base_backed_plan_data['plan_code'] + '__bar')
+        bar_add_on = filter(lambda add_on: add_on['add_on_code'] == 'bar', self.base_add_on_data)[0]
+        for k, v in bar_add_on.items():
+            if k == 'unit_amount_in_cents':
+                self.assertEqual(bar_add_on_backed[k], dict((curr, str(amt)) for curr, amt in v.currencies.items()))
+            else:
+                self.assertEqual(bar_add_on_backed[k], v)
+
+        # make sure foreign keys are linked properly
+        self.assertEqual(len(plan.add_ons()), 2)
+
     def test_simple_plan_creation(self):
         self.assertEqual(len(mocurly.backend.plans_backend.datastore), 0)
 
