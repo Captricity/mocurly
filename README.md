@@ -83,5 +83,5 @@ def test_count_recurly_accounts():
 Install
 =======
 ```shell
-$ pip install https://github.com/Captricity/mocurly.git
+$ pip install git+https://github.com/Captricity/mocurly.git
 ```
