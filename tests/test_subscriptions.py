@@ -238,3 +238,65 @@ class TestSubscriptions(unittest.TestCase):
         # now cancel it and verify it was canceled
         new_subscription.cancel()
         self.assertEqual(new_subscription.state, 'canceled')
+
+    def test_coupon_redemption_percent_discount(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+        # add a sample coupon to the coupons backend
+        base_coupon_data = {
+                'coupon_code': 'special',
+                'name': 'Special 10% off',
+                'discount_type': 'percent',
+                'discount_percent': 10
+            }
+        mocurly.backend.coupons_backend.add_object(base_coupon_data['coupon_code'], base_coupon_data)
+        # ... and redeem the coupon
+        base_redemption_data = {
+                'account_code': self.base_account_data['account_code'],
+                'currency': 'USD',
+                'coupon': base_coupon_data['coupon_code']
+            }
+        mocurly.backend.coupon_redemptions_backend.add_object(base_redemption_data['coupon'] + '__' + self.base_account_data['account_code'], base_redemption_data)
+
+        # Now add an active subscription and verify the transactions are discounted properly
+        new_subscription = recurly.Subscription(**self.base_subscription_data)
+        new_subscription.save()
+        invoice = new_subscription.invoice()
+        self.assertEqual(invoice.total_in_cents, 900)
+        line_items = invoice.line_items
+        self.assertEqual(len(line_items), 1)
+        line_item = line_items[0]
+        self.assertEqual(line_item.unit_amount_in_cents, 1000)
+        self.assertEqual(line_item.discount_in_cents, 100)
+        self.assertEqual(line_item.total_in_cents, 900)
+
+    def test_coupon_redemption_direct_discount(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+        # add a sample coupon to the coupons backend
+        base_coupon_data = {
+                'coupon_code': 'special',
+                'name': 'Special $1.00 off',
+                'discount_type': 'dollars',
+                'discount_in_cents': 100
+            }
+        mocurly.backend.coupons_backend.add_object(base_coupon_data['coupon_code'], base_coupon_data)
+        # ... and redeem the coupon
+        base_redemption_data = {
+                'account_code': self.base_account_data['account_code'],
+                'currency': 'USD',
+                'coupon': base_coupon_data['coupon_code']
+            }
+        mocurly.backend.coupon_redemptions_backend.add_object(base_redemption_data['coupon'] + '__' + self.base_account_data['account_code'], base_redemption_data)
+
+        # Now add an active subscription and verify the transactions are discounted properly
+        new_subscription = recurly.Subscription(**self.base_subscription_data)
+        new_subscription.save()
+        invoice = new_subscription.invoice()
+        self.assertEqual(invoice.total_in_cents, 900)
+        line_items = invoice.line_items
+        self.assertEqual(len(line_items), 1)
+        line_item = line_items[0]
+        self.assertEqual(line_item.unit_amount_in_cents, 1000)
+        self.assertEqual(line_item.discount_in_cents, 100)
+        self.assertEqual(line_item.total_in_cents, 900)
