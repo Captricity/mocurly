@@ -244,6 +244,7 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         create_info['voidable'] = True
         create_info['refundable'] = True
         create_info['created_at'] = current_time().isoformat()
+        create_info['type'] = 'credit_card'
 
         # Check to see if we need to throw an error for card failure
         if create_info['account'] in self.registered_errors:
