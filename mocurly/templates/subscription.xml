@@ -44,6 +44,7 @@
     <tax_rate type="float">{{ subscription.tax_rate }}</tax_rate>
     <po_number nil="nil"></po_number>
     <net_terms type="integer">0</net_terms>
+    <collection_method>{{ subscription.collection_method }}</collection_method>
     <subscription_add_ons type="array">
         {% for addon in subscription.subscription_add_ons %}
             <subscription_add_on>

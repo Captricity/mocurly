@@ -25,16 +25,16 @@ class callback(object):
 
     def __call__(self, func):
         def wrapped(request, uri, headers, **kwargs):
-            if self.mocurly_instance.timeout_connection:
+            if self.mocurly_instance.should_timeout(request):
                 raise ssl.SSLError('The read operation timed out')
 
             try:
                 return_val = func(request, uri, headers, **kwargs)
             except ResponseError as exc:
-                if not self.mocurly_instance.timeout_connection_successful_post:
+                if not self.mocurly_instance.should_timeout_successful_post(request):
                     return exc.status_code, headers, exc.response_body
 
-            if self.mocurly_instance.timeout_connection_successful_post:
+            if self.mocurly_instance.should_timeout_successful_post(request):
                 raise ssl.SSLError('The read operation timed out')
 
             return return_val
@@ -86,6 +86,7 @@ class mocurly(object):
         self.started = False
         HTTPretty.reset()
 
+        self.timeout_filter = None
         self.timeout_connection = False
         self.timeout_connection_successful_post = False
         self.func = func
@@ -121,16 +122,30 @@ class mocurly(object):
 
         HTTPretty.disable()
 
-    def start_timeout_all_connections(self):
+    def start_timeout(self, timeout_filter=None):
+        self.timeout_filter = timeout_filter
         self.timeout_connection = True
 
-    def stop_timeout_all_connections(self):
+    def should_timeout(self, request):
+        if self.timeout_filter is None or self.timeout_filter(request):
+            return self.timeout_connection
+        return False
+
+    def stop_timeout(self):
+        self.timeout_filter = None
         self.timeout_connection = False
 
-    def start_timeout_all_connections_successful_post(self):
+    def start_timeout_successful_post(self, timeout_filter=None):
+        self.timeout_filter = timeout_filter
         self.timeout_connection_successful_post = True
 
-    def stop_timeout_all_connections_successful_post(self):
+    def should_timeout_successful_post(self, request):
+        if self.timeout_filter is None or self.timeout_filter(request):
+            return self.timeout_connection_successful_post
+        return False
+
+    def stop_timeout_successful_post(self):
+        self.timeout_filter = None
         self.timeout_connection_successful_post = False
 
     def register_transaction_failure(self, account_code, error_code):
