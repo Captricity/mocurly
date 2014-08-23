@@ -63,3 +63,9 @@ class TestCoupons(unittest.TestCase):
         redemption = coupon.redeem(redemption)
 
         self.assertEqual(len(mocurly.backend.coupon_redemptions_backend.datastore), 1)
+
+        redemption = recurly.Account.get(self.base_account_data['account_code']).redemption()
+        self.assertEqual(redemption.coupon().coupon_code, self.base_coupon_data['coupon_code'])
+
+        redemption.delete()
+        self.assertEqual(len(mocurly.backend.coupon_redemptions_backend.datastore), 0)

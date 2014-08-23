@@ -212,6 +212,6 @@ class mocurly(object):
                         result = method(pk)
                     return status, headers, result
                 if method.method == 'DELETE':
-                    HTTPretty.register_uri(method.method, uri_re, body=callback(self)(extra_route_callback))
+                    HTTPretty.register_uri(HTTPretty.DELETE, uri_re, body=callback(self)(extra_route_callback))
                 else:
                     HTTPretty.register_uri(method.method, uri_re, body=callback(self)(extra_route_callback), content_type="application/xml")

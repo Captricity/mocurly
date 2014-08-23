@@ -70,6 +70,7 @@ class BaseRecurlyEndpoint(object):
     def delete(self, pk):
         cls = self.__class__
         cls.backend.delete_object(pk)
+        return ''
 
     def generate_id(self):
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(32))
@@ -117,6 +118,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
     def delete(self, pk):
         AccountsEndpoint.backend.update_object(pk, {'state': 'closed'})
         billing_info_backend.delete_object(pk)
+        return ''
 
     def billing_info_uris(self, obj):
         uri_out = {}
@@ -144,6 +146,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
     @details_route('DELETE', 'billing_info')
     def delete_billing_info(self, pk):
         billing_info_backend.delete_object(pk)
+        return ''
 
     @details_route('GET', 'transactions', is_list=True)
     def get_transactions_list(self, pk, filters=None, format=BaseRecurlyEndpoint.XML):
@@ -163,6 +166,13 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         out = SubscriptionsEndpoint.backend.list_objects(filter_subscriptions)
         return subscriptions_endpoint.serialize(out, format=format)
 
+    @details_route('GET', 'redemption')
+    def get_coupon_redemption_view(self, account_code, format=BaseRecurlyEndpoint.XML):
+        coupon_redemption = self.get_coupon_redemption(account_code)
+        if coupon_redemption is None:
+            raise ResponseError(404, '')
+        return coupons_endpoint.serialize_coupon_redemption(coupon_redemption, format=format)
+
     def get_coupon_redemption(self, account_code):
         account_coupon_redemptions = coupon_redemptions_backend.list_objects(lambda redemption: redemption['account_code'] == account_code)
         if len(account_coupon_redemptions) == 0:
@@ -171,6 +181,16 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         assert len(account_coupon_redemptions) == 1
         coupon_redemption = account_coupon_redemptions[0]
         return coupons_endpoint.hydrate_coupon_redemption_foreign_keys(coupon_redemption)
+
+    @details_route('DELETE', 'redemption')
+    def delete_coupon_redemption(self, account_code, format=BaseRecurlyEndpoint.XML):
+        coupon_redemption = self.get_coupon_redemption(account_code)
+        if coupon_redemption is None:
+            raise ResponseError(404, '')
+
+        coupon_redemption_uuid = coupons_endpoint.generate_coupon_redemption_uuid(coupon_redemption['coupon']['coupon_code'], account_code)
+        coupon_redemptions_backend.delete_object(coupon_redemption_uuid)
+        return ''
 
 class TransactionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'transactions'
@@ -286,6 +306,7 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         else:
             # TODO: raise exception - transaction cannot be refunded
             pass
+        return ''
 
 class AdjustmentsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'adjustments'
