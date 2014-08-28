@@ -50,7 +50,11 @@ class TestTransaction(unittest.TestCase):
         self.mocurly_.register_transaction_failure(self.base_account_data['uuid'], mocurly.errors.TRANSACTION_DECLINED)
         self.base_transaction_data['account'] = recurly.Account(account_code=self.base_account_data['uuid'])
         new_transaction = recurly.Transaction(**self.base_transaction_data)
-        self.assertRaises(recurly.ValidationError, new_transaction.save)
+        try:
+            new_transaction.save()
+            self.fail('No exception raised')
+        except recurly.ValidationError, exc:
+            self.assertEqual(exc.error, mocurly.errors.TRANSACTION_ERRORS[mocurly.errors.TRANSACTION_DECLINED]['customer'])
 
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
         self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 0)

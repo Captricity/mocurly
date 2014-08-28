@@ -4,3 +4,4 @@
     <merchant_message>{{ transaction_error.merchant }}</merchant_message>
     <customer_message>{{ transaction_error.customer }}</customer_message>
 </transaction_error>
+<error field="transaction.account.base" symbol="{{ transaction_error.error_category }}">{{ transaction_error.customer }}</error>
