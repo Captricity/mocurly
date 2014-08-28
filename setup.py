@@ -4,7 +4,7 @@ install_requires = open('requirements.txt').read().split()
 
 setup(
     name='mocurly',
-    version='0.0.11',
+    version='0.0.12',
     description='A library that allows your python tests to easily mock out the recurly library',
     author='Yoriyasu Yano',
     author_email='yoriy@captricity.com',
