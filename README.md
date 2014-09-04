@@ -22,13 +22,13 @@ def count_recurly_accounts():
 With mocurly, you can test the above code like so:
 ```python
 import recurly
+recurly.API_KEY = 'foo'
+recurly.SUBDOMAIN = 'bar'
 from mocurly import mocurly
 from count_module import count_recurly_accounts
 
 @mocurly
 def test_count_recurly_accounts():
-    recurly.API_KEY = 'foo'
-    recurly.SUBDOMAIN = 'bar'
     for i in range(10):
         recurly.Account(account_code=str(i)).save()
     assert count_recurly_accounts() == 10
@@ -45,8 +45,6 @@ Decorator
 ```python
 @mocurly
 def test_count_recurly_accounts():
-    recurly.API_KEY = 'foo'
-    recurly.SUBDOMAIN = 'bar'
     for i in range(10):
         recurly.Account(account_code=str(i)).save()
     assert count_recurly_accounts() == 10
@@ -57,8 +55,6 @@ Context Manager
 ```python
 def test_count_recurly_accounts():
     with mocurly():
-        recurly.API_KEY = 'foo'
-        recurly.SUBDOMAIN = 'bar'
         for i in range(10):
             recurly.Account(account_code=str(i)).save()
         assert count_recurly_accounts() == 10
@@ -71,8 +67,6 @@ def test_count_recurly_accounts():
     mocurly_ = mocurly()
     mocurly_.start()
 
-    recurly.API_KEY = 'foo'
-    recurly.SUBDOMAIN = 'bar'
     for i in range(10):
         recurly.Account(account_code=str(i)).save()
     assert count_recurly_accounts() == 10

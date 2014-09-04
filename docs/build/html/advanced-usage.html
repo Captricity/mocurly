@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Advanced Usage &mdash; mocurly 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="mocurly 0.1 documentation" href="index.html" />
+    <link rel="prev" title="Basic Usage" href="basic-usage.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="basic-usage.html" title="Basic Usage"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">mocurly 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="advanced-usage">
+<h1>Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="error-handling">
+<h2>Error handling<a class="headerlink" href="#error-handling" title="Permalink to this headline">¶</a></h2>
+<p>mocurly supports simulating certain error scenarios that commonly occur through the use of recurly. Currently, as of version 0.1, mocurly supports the following three scenarios:</p>
+<ul class="simple">
+<li><a class="reference internal" href="#request-timeout">Request timeout</a></li>
+<li><a class="reference internal" href="#request-timeout-with-a-successful-post">Request timeout with a successful POST</a></li>
+<li><a class="reference internal" href="#declined-transactions">Declined transactions</a></li>
+</ul>
+<p>Note that at this time, error handling is only supported in manual usage.</p>
+<div class="section" id="request-timeout">
+<h3>Request timeout<a class="headerlink" href="#request-timeout" title="Permalink to this headline">¶</a></h3>
+<p>Sometimes API calls may timeout. This may be due to faulty internet connections, or a server outage at recurly.com. While this is an unlikely case, we want to be prepared for those scenarios. That is why mocurly supports simulating a request that timesout.</p>
+<p>To trigger timeouts for requests, you can use the <tt class="xref py py-meth docutils literal"><span class="pre">start_timeout()</span></tt> method on your <cite>mocurly</cite> instance, assuming the context has been started. When called, this will trigger mocurly to always simulate a timeout by raising an <tt class="xref py py-class docutils literal"><span class="pre">ssl.SSLError</span></tt> exception for all requests.</p>
+<p>You can stop this behavior at any point by calling the <tt class="xref py py-meth docutils literal"><span class="pre">stop_timeout()</span></tt> method.</p>
+<p>In the following code snippet, the first <tt class="xref py py-meth docutils literal"><span class="pre">save()</span></tt> call will raise an <tt class="xref py py-class docutils literal"><span class="pre">ssl.SSLError</span></tt> because it is wrapped in the timeout context, but the second will succeed:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span> <span class="o">=</span> <span class="n">mocurly</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">start_timeout</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Will fail</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="p">(</span><span class="n">account_code</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">stop_timeout</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Will succeed</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="p">(</span><span class="n">account_code</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>You can also pass an optional filter function to <tt class="xref py py-meth docutils literal"><span class="pre">start_timeout()</span></tt> to control what requests get timedout. The filter function will receive a <cite>request</cite> object, which contains several attributes you can use to filter the call on. Refer to the API reference for more details on what attributes the request object contains.</p>
+<p>For example, the following snippet will only trigger timeouts on GET requests:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span> <span class="o">=</span> <span class="n">mocurly</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">start_timeout</span><span class="p">(</span><span class="k">lambda</span> <span class="n">request</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">&#39;GET&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Will succeed</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="p">(</span><span class="n">account_code</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Will fail</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;foo&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">stop_timeout</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="request-timeout-with-a-successful-post">
+<h3>Request timeout with a successful POST<a class="headerlink" href="#request-timeout-with-a-successful-post" title="Permalink to this headline">¶</a></h3>
+<p>As mentioned in the <a class="reference internal" href="#request-timeout">previous section</a>, mocurly supports simulating requests that timeout. However, sometimes the request times out while receiving a response from the recurly servers, after the POST request has successfully reached the recurly server. These cases are especially difficult to deal with, because the python client raises an exception, even though the request went through and created the object on recurly&#8217;s side, which could have charged the user&#8217;s credit card. mocurly supports this scenario as well, using a similar syntax as simulating <a class="reference internal" href="#request-timeout">request timeout</a>.</p>
+<p>To simulate a request timeout with a successfuly POST, use the <tt class="xref py py-meth docutils literal"><span class="pre">start_timeout_successful_post()</span></tt> method of the mocurly instance.</p>
+<p>Note that by nature of the simulation, this will only simulate the timeout on POST requests. This means that you can use this in combination with <tt class="xref py py-meth docutils literal"><span class="pre">start_timeout()</span></tt> to simulate complex timeout scenarios.</p>
+<p>In the following example, although the save call fails, the account will still be created in the mocurly database:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span> <span class="o">=</span> <span class="n">mocurly</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">start_timeout_successful_post</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Will fail, but the account is created successfully</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="p">(</span><span class="n">account_code</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;foo&#39;</span><span class="p">)</span> <span class="c"># returns an actual account</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">stop_timeout_successful_post</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Like <tt class="xref py py-meth docutils literal"><span class="pre">start_timeout()</span></tt>, this can also take in a filter function to simulate the timeout only on certain requests.</p>
+</div>
+<div class="section" id="declined-transactions">
+<h3>Declined transactions<a class="headerlink" href="#declined-transactions" title="Permalink to this headline">¶</a></h3>
+<p>When we deal with real credit cards out in the wild, there will always be a case where a transaction might fail due to a declined credit card. mocurly supports simulating transaction requests with a declined credit card, both for one time transactions and subscription payments.</p>
+<p>To trigger a declined credit card, use the <tt class="xref py py-meth docutils literal"><span class="pre">register_transaction_failure()</span></tt> method on your <cite>mocurly</cite> instance. <tt class="xref py py-meth docutils literal"><span class="pre">register_transaction_failure()</span></tt> takes two arguments: the <cite>account_code</cite> of the user who&#8217;s credit card will be rejected, and the error code to use. These error codes should be pulled from <cite>mocurly.errors</cite>. Refer to the API reference for more info on what error codes are available.</p>
+<p>In the following snippet, the transaction made for joe will be declined by mocurly, but not for billy:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span> <span class="o">=</span> <span class="n">mocurly</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">register_transaction_failure</span><span class="p">(</span><span class="s">&#39;joe&#39;</span><span class="p">,</span> <span class="n">mocurly</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">TRANSACTION_DECLINED</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">joe</span> <span class="o">=</span> <span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;joe&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">Transaction</span><span class="p">(</span><span class="n">amount_in_cents</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">currency</span><span class="o">=</span><span class="s">&#39;USD&#39;</span><span class="p">,</span> <span class="n">account</span><span class="o">=</span><span class="n">joe</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span> <span class="c"># will fail</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">billy</span> <span class="o">=</span> <span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;joe&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">Transaction</span><span class="p">(</span><span class="n">amount_in_cents</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">currency</span><span class="o">=</span><span class="s">&#39;USD&#39;</span><span class="p">,</span> <span class="n">account</span><span class="o">=</span><span class="n">billy</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span> <span class="c"># will succeed</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mocurly_</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Advanced Usage</a><ul>
+<li><a class="reference internal" href="#error-handling">Error handling</a><ul>
+<li><a class="reference internal" href="#request-timeout">Request timeout</a></li>
+<li><a class="reference internal" href="#request-timeout-with-a-successful-post">Request timeout with a successful POST</a></li>
+<li><a class="reference internal" href="#declined-transactions">Declined transactions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="basic-usage.html"
+                        title="previous chapter">Basic Usage</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/advanced-usage.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="basic-usage.html" title="Basic Usage"
+             >previous</a> |</li>
+        <li><a href="index.html">mocurly 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Captricity.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

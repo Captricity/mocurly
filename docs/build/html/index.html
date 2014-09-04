@@ -1,0 +1,203 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Mocurly &mdash; mocurly 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="mocurly 0.1 documentation" href="#" />
+    <link rel="next" title="Basic Usage" href="basic-usage.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="basic-usage.html" title="Basic Usage"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">mocurly 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="mocurly">
+<h1>Mocurly<a class="headerlink" href="#mocurly" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Author:</th><td class="field-body">Captricity</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Version:</th><td class="field-body">0.1</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Date:</th><td class="field-body">2014/09/03</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Homepage:</th><td class="field-body"><a class="reference external" href="https://github.com/Captricity/mocurly">Mocurly Homepage</a></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Download:</th><td class="field-body"><a class="reference external" href="TODO">PyPI</a></td>
+</tr>
+<tr class="field-even field"><th class="field-name">License:</th><td class="field-body"><a class="reference internal" href="#mit-license">MIT License</a></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Issue tracker:</th><td class="field-body"><a class="reference external" href="https://github.com/Captricity/mocurly/issues">Github issues</a></td>
+</tr>
+</tbody>
+</table>
+<p>Mocurly is a library that mocks the recurly python client so that you can easily write tests for applications that use the recurly python client.</p>
+<p>Mocurly acts as a mock backend for the recurly client, allowing you to use the recurly python client AS IS. This means that all your code that uses the recurly python client and targets recurly objects will all work as you would expect. Best of all: you can use the recurly python client to setup the test environment!</p>
+<p>For example, suppose you had a simple function in your app that lists all the users in recurly, and counts them:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">recurly</span>
+<span class="n">recurly</span><span class="o">.</span><span class="n">API_KEY</span> <span class="o">=</span> <span class="s">&#39;foo&#39;</span>
+<span class="n">recurly</span><span class="o">.</span><span class="n">SUBDOMAIN</span> <span class="o">=</span> <span class="s">&#39;bar&#39;</span>
+
+<span class="k">def</span> <span class="nf">count_recurly_accounts</span><span class="p">():</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>With mocurly, you can test the above code like so:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">recurly</span>
+<span class="n">recurly</span><span class="o">.</span><span class="n">API_KEY</span> <span class="o">=</span> <span class="s">&#39;foo&#39;</span>
+<span class="n">recurly</span><span class="o">.</span><span class="n">SUBDOMAIN</span> <span class="o">=</span> <span class="s">&#39;bar&#39;</span>
+<span class="kn">from</span> <span class="nn">mocurly</span> <span class="kn">import</span> <span class="n">mocurly</span>
+<span class="kn">from</span> <span class="nn">count_module</span> <span class="kn">import</span> <span class="n">count_recurly_accounts</span>
+
+<span class="nd">@mocurly</span>
+<span class="k">def</span> <span class="nf">test_count_recurly_accounts</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+        <span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="p">(</span><span class="n">account_code</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">count_recurly_accounts</span><span class="p">()</span> <span class="o">==</span> <span class="mi">10</span>
+</pre></div>
+</div>
+<p>Within the decorator context, all calls to recurly are captured by mocurly, which keeps the state in memory for the duration of the context. No actual web calls are made, allowing you to test your recurly code without worrying about existing context or internet connections.</p>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="basic-usage.html">Basic Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="basic-usage.html#mocurly-as-decorator">mocurly as decorator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-usage.html#mocurly-as-context-manager">mocurly as context manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-usage.html#mocurly-used-manually">mocurly used manually</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="advanced-usage.html">Advanced Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced-usage.html#error-handling">Error handling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="advanced-usage.html#request-timeout">Request timeout</a></li>
+<li class="toctree-l3"><a class="reference internal" href="advanced-usage.html#request-timeout-with-a-successful-post">Request timeout with a successful POST</a></li>
+<li class="toctree-l3"><a class="reference internal" href="advanced-usage.html#declined-transactions">Declined transactions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="license">
+<span id="mit-license"></span><h2>LICENSE<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre>The MIT License (MIT)
+
+Copyright (c) 2014 Captricity
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Mocurly</a><ul>
+<li><a class="reference internal" href="#usage">Usage</a></li>
+<li><a class="reference internal" href="#license">LICENSE</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="basic-usage.html"
+                        title="next chapter">Basic Usage</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="basic-usage.html" title="Basic Usage"
+             >next</a> |</li>
+        <li><a href="#">mocurly 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Captricity.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>
