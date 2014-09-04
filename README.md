@@ -1,7 +1,7 @@
 mocurly
 =======
 
-[![Build Status](https://travis-ci.org/Captricity/mocurly.svg?branch=master)](https://travis-ci.org/Captricity/mocurly) [![Coverage Status](https://coveralls.io/repos/Captricity/mocurly/badge.png?branch=master)](https://coveralls.io/r/Captricity/mocurly?branch=master)
+[![Build Status](https://travis-ci.org/Captricity/mocurly.svg?branch=master)](https://travis-ci.org/Captricity/mocurly) [![Coverage Status](https://coveralls.io/repos/Captricity/mocurly/badge.png?branch=master)](https://coveralls.io/r/Captricity/mocurly?branch=master) [![Documentation Status](https://readthedocs.org/projects/mocurly/badge/?version=latest)](https://readthedocs.org/projects/mocurly/?badge=latest)
 
 Mocurly is a library that mocks the recurly python client so that you can easily write tests for applications that use the recurly python client.
 
