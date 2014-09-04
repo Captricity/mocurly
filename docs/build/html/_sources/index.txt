@@ -8,7 +8,7 @@ Mocurly
 :Homepage: `Mocurly Homepage
            <https://github.com/Captricity/mocurly>`_
 :Download: `PyPI
-           <TODO>`_
+           <https://pypi.python.org/pypi/mocurly>`_
 :License: `MIT License`_
 :Issue tracker: `Github issues
                 <https://github.com/Captricity/mocurly/issues>`_
