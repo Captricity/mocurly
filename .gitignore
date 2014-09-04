@@ -7,3 +7,4 @@ test.py
 */*.pyc
 */__pycache__/*
 mocurly.egg-info
+*.egg
