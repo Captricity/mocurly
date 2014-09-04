@@ -25,7 +25,10 @@ class callback(object):
 
     def __call__(self, func):
         def wrapped(request, uri, headers, **kwargs):
-            if self.mocurly_instance.should_timeout(request):
+            # If we want to timeout the request, timeout, but only if we aren't
+            # going to allow the POST
+            if (self.mocurly_instance.should_timeout(request) and
+                not self.mocurly_instance.should_timeout_successful_post(request)):
                 raise ssl.SSLError('The read operation timed out')
 
             try:
@@ -140,6 +143,9 @@ class mocurly(object):
         self.timeout_connection_successful_post = True
 
     def should_timeout_successful_post(self, request):
+        # only applies to POST requests
+        if request.method != 'POST':
+            return False
         if self.timeout_filter is None or self.timeout_filter(request):
             return self.timeout_connection_successful_post
         return False
