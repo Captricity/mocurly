@@ -6,7 +6,7 @@ setup(
     name='mocurly',
     packages=find_packages(exclude=("tests", "tests.*")),
     package_data={'mocurly': ['templates/*.xml']},
-    version='0.1',
+    version='0.1.1',
     description='A library that allows your python tests to easily mock out the recurly library',
     author='Yoriyasu Yano',
     author_email='yoriy@captricity.com',
