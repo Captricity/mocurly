@@ -487,20 +487,22 @@ class CouponsEndpoint(BaseRecurlyEndpoint):
         return uri_out
 
     def serialize_coupon_redemption(self, obj, format=BaseRecurlyEndpoint.XML):
-        obj = self.hydrate_coupon_redemption_foreign_keys(obj)
         if format == BaseRecurlyEndpoint.RAW:
+            obj = self.hydrate_coupon_redemption_foreign_keys(obj)
             return obj
 
         if type(obj) == list:
+            obj = [self.hydrate_coupon_redemption_foreign_keys(o) for o in obj]
             for o in obj:
                 o['uris'] = self.coupon_redemption_uris(o)
             return serialize_list('redemption.xml', 'redemptions', 'redemption', obj)
         else:
+            obj = self.hydrate_coupon_redemption_foreign_keys(obj)
             obj['uris'] = self.coupon_redemption_uris(obj)
             return serialize('redemption.xml', 'redemption', obj)
 
     @details_route('GET', 'redemptions', is_list=True)
-    def get_coupon_redemptions(self, pk, format=BaseRecurlyEndpoint.XML):
+    def get_coupon_redemptions(self, pk, filters=None, format=BaseRecurlyEndpoint.XML):
         obj_list = coupon_redemptions_backend.list_objects(lambda redemption: redemption['coupon'] == pk)
         return self.serialize_coupon_redemption(obj_list, format=format)
 

@@ -138,6 +138,12 @@ class TestSubscriptions(unittest.TestCase):
             else:
                 self.assertEqual(new_plan_backed[k], v)
 
+    def test_plan_deletion(self):
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+        self.assertEqual(len(mocurly.backend.plans_backend.datastore), 1)
+        recurly.Plan.get(self.base_backed_plan_data['plan_code']).delete()
+        self.assertEqual(len(mocurly.backend.plans_backend.datastore), 0)
+
     def test_simple_subscription_creation(self):
         # add a sample plan to the plans backend
         mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)

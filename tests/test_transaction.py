@@ -40,6 +40,25 @@ class TestTransaction(unittest.TestCase):
                 'currency': 'USD'
             }
 
+        self.base_invoice_data = {
+                'account': self.base_account_data['uuid'],
+                'uuid': 'foo',
+                'state': 'collected',
+                'invoice_number': '1234',
+                'subtotal_in_cents': self.base_transaction_data['amount_in_cents'],
+                'currency': self.base_transaction_data['currency'],
+                'created_at': '2014-08-11',
+                'net_terms': 0,
+                'collection_method': 'automatic',
+
+                'tax_type': 'usst',
+                'tax_rate': 0,
+                'tax_in_cents': 0,
+                'total_in_cents': self.base_transaction_data['amount_in_cents'],
+                'transactions': ['1234']
+            }
+
+
     def tearDown(self):
         self.mocurly_.stop()
 
@@ -126,24 +145,7 @@ class TestTransaction(unittest.TestCase):
     def test_transaction_refund(self):
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
 
-        base_invoice_data = {
-                'account': self.base_account_data['uuid'],
-                'uuid': 'foo',
-                'state': 'collected',
-                'invoice_number': '1234',
-                'subtotal_in_cents': self.base_transaction_data['amount_in_cents'],
-                'currency': self.base_transaction_data['currency'],
-                'created_at': '2014-08-11',
-                'net_terms': 0,
-                'collection_method': 'automatic',
-
-                'tax_type': 'usst',
-                'tax_rate': 0,
-                'tax_in_cents': 0,
-                'total_in_cents': self.base_transaction_data['amount_in_cents'],
-                'transactions': ['1234']
-            }
-        mocurly.backend.invoices_backend.add_object('1234', base_invoice_data)
+        mocurly.backend.invoices_backend.add_object('1234', self.base_invoice_data)
 
         self.base_transaction_data['uuid'] = '1234'
         self.base_transaction_data['account'] = self.base_account_data['uuid']
@@ -195,4 +197,3 @@ class TestTransaction(unittest.TestCase):
         transactions = list(acc.transactions())
         self.assertEqual(len(transactions), 2)
         self.assertEqual(set([transaction.uuid for transaction in transactions]), set(['1234', 'abcd']))
-
