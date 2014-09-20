@@ -7,10 +7,12 @@ from xml.dom import minidom
 from jinja2 import Environment, PackageLoader
 jinja2_env = Environment(loader=PackageLoader('mocurly', 'templates'), extensions=['jinja2.ext.with_'])
 
+
 def current_time():
     """Returns the current time in UTC, with the timezone set
     """
     return datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+
 
 def details_route(method, uri, is_list=False):
     """A decorator for Endpoint classes to define a custom URI.
@@ -35,6 +37,7 @@ def details_route(method, uri, is_list=False):
         return func
     return details_route_decorator
 
+
 def serialize_list(template, object_type_plural, object_type, object_list):
     """Serializes a list of resource objects into its XML version.
 
@@ -52,6 +55,7 @@ def serialize_list(template, object_type_plural, object_type, object_list):
         serialized_obj_list.append(serialize(template, object_type, obj))
     return '<{0} type="array">{1}</{0}>'.format(object_type_plural, ''.join(serialized_obj_list)), len(serialized_obj_list)
 
+
 def serialize(template, object_type, object_dict):
     """Serializes a resource object into its XML version.
 
@@ -67,6 +71,7 @@ def serialize(template, object_type, object_dict):
     kwargs = {}
     kwargs[object_type] = object_dict
     return template.render(**kwargs)
+
 
 def deserialize(xml):
     """Deserialize the XML string into an object
@@ -88,10 +93,12 @@ def deserialize(xml):
     else:
         return _deserialize_item(root)
 
+
 def _deserialize_list(root):
     """Deserializes a list of objects into their dictionary form.
     """
     return [_deserialize_item(node)[1] for node in root.childNodes]
+
 
 def _deserialize_item(root):
     object_type = root.tagName
@@ -107,5 +114,3 @@ def _deserialize_item(root):
             child_object_type, child_object = _deserialize_item(node)
             obj[node.tagName] = child_object
     return object_type, obj
-
-

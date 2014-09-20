@@ -11,15 +11,18 @@ ERROR_CODES = [TRANSACTION_DECLINED]
 # Requires:
 #   error_code - Recurly error code that represnts the particular error
 #   error_category - Category of the error
-#   customer - Error message that should be used for the customer, as provided by recurly.
-#   merchant - Error message that should be used for the merchant, as provided by recurly.
+#   customer - Error message that should be used for the customer, as provided
+#       by recurly.
+#   merchant - Error message that should be used for the merchant, as provided
+#       by recurly.
 TRANSACTION_ERRORS = {}
-TRANSACTION_ERRORS[TRANSACTION_DECLINED] =  {
-        'error_code': TRANSACTION_DECLINED,
-        'error_category': 'declined',
-        'customer': 'The transaction was declined. Please use a different card or contact your bank.',
-        'merchant': 'The transaction was declined without specific information. Please contact your payment gateway for more details or ask the customer to contact their bank.'
-    }
+TRANSACTION_ERRORS[TRANSACTION_DECLINED] = {
+    'error_code': TRANSACTION_DECLINED,
+    'error_category': 'declined',
+    'customer': 'The transaction was declined. Please use a different card or contact your bank.',
+    'merchant': 'The transaction was declined without specific information.  Please contact your payment gateway for more details or ask the customer to contact their bank.'
+}
+
 
 class ResponseError(Exception):
     """Exception class used to signal returning an error response from the

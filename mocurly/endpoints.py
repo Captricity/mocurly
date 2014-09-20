@@ -14,6 +14,7 @@ from .errors import TRANSACTION_ERRORS, ResponseError
 from .utils import details_route, serialize, serialize_list
 from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, plan_add_ons_backend, adjustments_backend, coupons_backend, coupon_redemptions_backend
 
+
 class BaseRecurlyEndpoint(object):
     """Baseclass for simulating resource endpoints.
 
@@ -46,7 +47,7 @@ class BaseRecurlyEndpoint(object):
     def serialize(self, obj, format=XML):
         """Serialize the object into the provided format, using the resource
         template.
-        
+
         Currently only supports XML (for XML representation of the resource.
         This is what recurly expects) and RAW (a dictionary representation of
         the resource)
@@ -119,6 +120,7 @@ class BaseRecurlyEndpoint(object):
         """
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(32))
 
+
 class AccountsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'accounts'
     pk_attr = 'account_code'
@@ -164,10 +166,10 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         billing_info_backend.delete_object(pk)
         return ''
 
-    ### Support for nested resources
-    ### BillingInfo and CouponRedemption are managed by this endpoint, as
-    ### opposed to having their own since Recurly API only provides access to these
-    ### resources through the Account endpoint.
+    # Support for nested resources
+    # BillingInfo and CouponRedemption are managed by this endpoint, as
+    # opposed to having their own since Recurly API only provides access to these
+    # resources through the Account endpoint.
     def billing_info_uris(self, obj):
         uri_out = {}
         uri_out['account_uri'] = recurly.base_uri() + AccountsEndpoint.base_uri + '/' + obj['account']
@@ -240,6 +242,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         coupon_redemptions_backend.delete_object(coupon_redemption_uuid)
         return ''
 
+
 class TransactionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'transactions'
     backend = transactions_backend
@@ -291,8 +294,8 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         assert AccountsEndpoint.backend.has_object(account_code)
         create_info['account'] = account_code
 
-        create_info['uuid'] = self.generate_id() # generate id now for invoice
-        create_info['tax_in_cents'] = 0 #unsupported
+        create_info['uuid'] = self.generate_id()  # generate id now for invoice
+        create_info['tax_in_cents'] = 0  # unsupported
         create_info['action'] = 'purchase'
         create_info['status'] = 'success'
         create_info['test'] = True
@@ -315,21 +318,19 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
             raise ResponseError(422, '<errors>{0}{1}</errors>'.format(error_xml, transaction_xml))
 
         # Every new transaction creates a new invoice
-        new_invoice = {
-                'account': account_code,
-                'uuid': self.generate_id(),
-                'state': 'collected',
-                'invoice_number': InvoicesEndpoint.generate_invoice_number(),
-                'subtotal_in_cents': int(create_info['amount_in_cents']),
-                'currency': create_info['currency'],
-                'created_at': create_info['created_at'],
-                'net_terms': 0,
-                'collection_method': 'automatic',
+        new_invoice = {'account': account_code,
+                       'uuid': self.generate_id(),
+                       'state': 'collected',
+                       'invoice_number': InvoicesEndpoint.generate_invoice_number(),
+                       'subtotal_in_cents': int(create_info['amount_in_cents']),
+                       'currency': create_info['currency'],
+                       'created_at': create_info['created_at'],
+                       'net_terms': 0,
+                       'collection_method': 'automatic',
 
-                # unsupported
-                'tax_type': 'usst',
-                'tax_rate': 0
-            }
+                       # unsupported
+                       'tax_type': 'usst',
+                       'tax_rate': 0}
         new_invoice['tax_in_cents'] = new_invoice['subtotal_in_cents'] * new_invoice['tax_rate']
         new_invoice['total_in_cents'] = new_invoice['subtotal_in_cents'] + new_invoice['tax_in_cents']
         new_invoice['transactions'] = [create_info['uuid']]
@@ -357,14 +358,16 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
             if amount_in_cents is not None:
                 refund_transaction['amount_in_cents'] = amount_in_cents
             TransactionsEndpoint.backend.add_object(refund_transaction['uuid'], refund_transaction)
-            TransactionsEndpoint.backend.update_object(transaction['uuid'], {'refundable': False}) # Refunded, so now its no longer refundable
+            # Refunded, so now its no longer refundable
+            TransactionsEndpoint.backend.update_object(transaction['uuid'], {'refundable': False})
 
             invoice = InvoicesEndpoint.backend.get_object(transaction['invoice'])
-            InvoicesEndpoint.backend.update_object(transaction['invoice'], {'transactions': invoice['transactions']+[refund_transaction['uuid']]})
+            InvoicesEndpoint.backend.update_object(transaction['invoice'], {'transactions': invoice['transactions'] + [refund_transaction['uuid']]})
         else:
             # TODO: raise exception - transaction cannot be refunded
             pass
         return ''
+
 
 class AdjustmentsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'adjustments'
@@ -372,14 +375,13 @@ class AdjustmentsEndpoint(BaseRecurlyEndpoint):
     object_type = 'adjustment'
     object_type_plural = 'adjustments'
     template = 'adjustment.xml'
-    defaults = {
-            'state': 'active',
-            'quantity': 1,
-            'origin': 'credit',
-            'product_code': 'basic',
-            'discount_in_cents': 0,
-            'tax_exempt': False # unsupported
-        }
+    defaults = {'state': 'active',
+                'quantity': 1,
+                'origin': 'credit',
+                'product_code': 'basic',
+                'discount_in_cents': 0,
+                # unsupported
+                'tax_exempt': False}
 
     def uris(self, obj):
         uri_out = super(AdjustmentsEndpoint, self).uris(obj)
@@ -445,6 +447,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
             return '1000'
         return str(max(int(invoice['invoice_number']) for invoice in InvoicesEndpoint.backend.list_objects()) + 1)
 
+
 class CouponsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'coupons'
     backend = coupons_backend
@@ -452,11 +455,9 @@ class CouponsEndpoint(BaseRecurlyEndpoint):
     object_type_plural = 'coupons'
     pk_attr = 'coupon_code'
     template = 'coupon.xml'
-    defaults = {
-            'state': 'redeemable',
-            'applies_to_all_plans': True,
-            'single_use': False
-        }
+    defaults = {'state': 'redeemable',
+                'applies_to_all_plans': True,
+                'single_use': False}
 
     def uris(self, obj):
         uri_out = super(CouponsEndpoint, self).uris(obj)
@@ -520,6 +521,7 @@ class CouponsEndpoint(BaseRecurlyEndpoint):
         else:
             return int(coupon['discount_in_cents'])
 
+
 class PlansEndpoint(BaseRecurlyEndpoint):
     base_uri = 'plans'
     backend = plans_backend
@@ -527,18 +529,15 @@ class PlansEndpoint(BaseRecurlyEndpoint):
     object_type = 'plan'
     object_type_plural = 'plans'
     template = 'plan.xml'
-    defaults = {
-        'plan_interval_unit': 'months',
-        'plan_interval_length': 1,
-        'trial_interval_unit': 'months',
-        'trial_interval_length': 0,
-        'display_quantity': False,
-        'tax_exempt': False # unsupported
-    }
-    add_on_defaults = {
-        'default_quantity': 1,
-        'display_quantity_on_hosted_page': False
-    }
+    defaults = {'plan_interval_unit': 'months',
+                'plan_interval_length': 1,
+                'trial_interval_unit': 'months',
+                'trial_interval_length': 0,
+                'display_quantity': False,
+                # unsupported
+                'tax_exempt': False}
+    add_on_defaults = {'default_quantity': 1,
+                       'display_quantity_on_hosted_page': False}
 
     def uris(self, obj):
         uri_out = super(PlansEndpoint, self).uris(obj)
@@ -588,13 +587,14 @@ class PlansEndpoint(BaseRecurlyEndpoint):
             create_info['accounting_code'] = create_info['add_on_code']
         return self.serialize_plan_add_on(plan_add_ons_backend.add_object(self.generate_plan_add_on_uuid(pk, create_info['add_on_code']), create_info), format=format)
 
+
 class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     base_uri = 'subscriptions'
     backend = subscriptions_backend
     object_type = 'subscription'
     object_type_plural = 'subscriptions'
     template = 'subscription.xml'
-    defaults = { 'quantity': 1, 'collection_method': 'automatic' }
+    defaults = {'quantity': 1, 'collection_method': 'automatic'}
 
     def _calculate_timedelta(self, units, length):
         timedelta_info = {}
@@ -656,7 +656,8 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         if 'starts_at' in create_info:
             # A custom start date is specified
             create_info['activated_at'] = create_info['starts_at']
-            create_info['current_period_started_at'] = create_info['starts_at'] # TODO: confirm recurly sets current_period_started_at for future subs
+            # TODO: confirm recurly sets current_period_started_at for future subs
+            create_info['current_period_started_at'] = create_info['starts_at']
         elif 'trial_started_at' in create_info:
             create_info['activated_at'] = self._parse_isoformat(create_info['trial_ends_at'])
             create_info['current_period_started_at'] = create_info['trial_started_at']
@@ -666,7 +667,8 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             create_info['current_period_started_at'] = now.isoformat()
 
         started_at = self._parse_isoformat(create_info['current_period_started_at'])
-        if now >= started_at: # Plan already started
+        if now >= started_at:
+            # Plan already started
             if 'first_renewal_date' in create_info:
                 create_info['current_period_ends_at'] = self._parse_isoformat(create_info['first_renewal_date'])
             else:
@@ -708,24 +710,24 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             total = 0
             adjustment_infos = []
             plan_charge_line_item = {
-                        'account_code': new_sub['account'],
-                        'currency': new_sub['currency'],
-                        'unit_amount_in_cents': int(new_sub['unit_amount_in_cents']),
-                        'description': new_sub['plan']['name'],
-                        'quantity': new_sub['quantity']
-                    }
+                'account_code': new_sub['account'],
+                'currency': new_sub['currency'],
+                'unit_amount_in_cents': int(new_sub['unit_amount_in_cents']),
+                'description': new_sub['plan']['name'],
+                'quantity': new_sub['quantity']
+            }
             total += plan_charge_line_item['unit_amount_in_cents']
             adjustment_infos.append(plan_charge_line_item)
 
             if 'subscription_add_ons' in new_sub:
                 for add_on in new_sub['subscription_add_ons']:
                     plan_charge_line_item = {
-                                'account_code': new_sub['account'],
-                                'currency': new_sub['currency'],
-                                'unit_amount_in_cents': int(add_on['unit_amount_in_cents']),
-                                'description': add_on['name'],
-                                'quantity': new_sub['quantity'],
-                            }
+                        'account_code': new_sub['account'],
+                        'currency': new_sub['currency'],
+                        'unit_amount_in_cents': int(add_on['unit_amount_in_cents']),
+                        'description': add_on['name'],
+                        'quantity': new_sub['quantity'],
+                    }
                     total += plan_charge_line_item['unit_amount_in_cents']
                     adjustment_infos.append(plan_charge_line_item)
 
@@ -779,19 +781,19 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             transactions_endpoint.delete(transaction[TransactionsEndpoint.pk_attr])
 
         return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
-                'state': 'expired',
-                'expires_at': now.isoformat(),
-                'current_period_ends_at': now.isoformat()
-            }), format=format)
+            'state': 'expired',
+            'expires_at': now.isoformat(),
+            'current_period_ends_at': now.isoformat()
+        }), format=format)
 
     @details_route('PUT', 'cancel')
     def cancel_subscription(self, pk, cancel_info, format=format):
         subscription = SubscriptionsEndpoint.backend.get_object(pk)
         return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
-                'state': 'canceled',
-                'expires_at': subscription['current_period_ends_at'],
-                'canceled_at': current_time().isoformat()
-            }), format=format)
+            'state': 'canceled',
+            'expires_at': subscription['current_period_ends_at'],
+            'canceled_at': current_time().isoformat()
+        }), format=format)
 
 accounts_endpoint = AccountsEndpoint()
 adjustments_endpoint = AdjustmentsEndpoint()
@@ -801,12 +803,13 @@ invoices_endpoint = InvoicesEndpoint()
 plans_endpoint = PlansEndpoint()
 subscriptions_endpoint = SubscriptionsEndpoint()
 endpoints = [accounts_endpoint,
-        adjustments_endpoint,
-        transactions_endpoint,
-        coupons_endpoint,
-        invoices_endpoint,
-        plans_endpoint,
-        subscriptions_endpoint]
+             adjustments_endpoint,
+             transactions_endpoint,
+             coupons_endpoint,
+             invoices_endpoint,
+             plans_endpoint,
+             subscriptions_endpoint]
+
 
 def clear_endpoints():
     """Clear state off of all endpoints. This ensures that no residual state

@@ -1,7 +1,7 @@
 """In-memory database backends for each recurly resource
 """
-
 import six
+
 
 class BaseBackend(object):
     """Datastore to store resource objects in memory throughout the recurly context.
@@ -55,35 +55,46 @@ class BaseBackend(object):
         """
         self.datastore = {}
 
+
 class AccountBackend(BaseBackend):
     pass
+
 
 class BillingInfoBackend(BaseBackend):
     pass
 
+
 class InvoiceBackend(BaseBackend):
     pass
+
 
 class CouponBackend(BaseBackend):
     pass
 
+
 class CouponRedemptionBackend(BaseBackend):
     pass
+
 
 class PlanBackend(BaseBackend):
     pass
 
+
 class PlanAddOnBackend(BaseBackend):
     pass
+
 
 class SubscriptionBackend(BaseBackend):
     pass
 
+
 class TransactionBackend(BaseBackend):
     pass
 
+
 class AdjustmentBackend(BaseBackend):
     pass
+
 
 # Provide public access to each resource backend, so that users can do low
 # level object checking in their tests (e.g query objects that were created as
@@ -98,6 +109,7 @@ plan_add_ons_backend = PlanAddOnBackend()
 subscriptions_backend = SubscriptionBackend()
 transactions_backend = TransactionBackend()
 adjustments_backend = AdjustmentBackend()
+
 
 def clear_backends():
     """Clears all resource datastores. This ensures that no residual state

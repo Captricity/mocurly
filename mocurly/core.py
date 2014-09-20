@@ -3,7 +3,6 @@
 Exposes the main mocurly class which is the gateway into setting up the mocurly
 context.
 """
-
 import recurly
 import re
 import ssl
@@ -14,36 +13,6 @@ from .utils import deserialize
 from .errors import ResponseError
 from .backend import clear_backends
 
-class _callback(object):
-    """Decorator for setting up callback functions to be used in the mocurly
-    context.
-
-    This will handle the machinery behind timeout and error simulation.
-    """
-    def __init__(self, mocurly_instance):
-        self.mocurly_instance = mocurly_instance
-
-    def __call__(self, func):
-        def wrapped(request, uri, headers, **kwargs):
-            # If we want to timeout the request, timeout, but only if we aren't
-            # going to allow the POST
-            if (self.mocurly_instance.should_timeout(request) and
-                not self.mocurly_instance.should_timeout_successful_post(request)):
-                raise ssl.SSLError('The read operation timed out')
-
-            try:
-                return_val = func(request, uri, headers, **kwargs)
-            except ResponseError as exc:
-                # Pass through response errors in a way that httpretty will
-                # respond with the right status code and message
-                if not self.mocurly_instance.should_timeout_successful_post(request):
-                    return exc.status_code, headers, exc.response_body
-
-            if self.mocurly_instance.should_timeout_successful_post(request):
-                raise ssl.SSLError('The read operation timed out')
-
-            return return_val
-        return wrapped
 
 class mocurly(object):
     """Main class that provides the mocked context.
@@ -214,6 +183,7 @@ class mocurly(object):
             for method in filter(lambda method: callable(method) and getattr(method, 'is_route', False), (getattr(endpoint, m) for m in dir(endpoint))):
                 uri = detail_uri + '/' + method.uri
                 uri_re = re.compile(uri)
+
                 def extra_route_callback(request, uri, headers, method=method, uri_re=uri_re):
                     pk = uri_re.match(uri).group(1)
                     if method.method == 'DELETE':
@@ -236,3 +206,35 @@ class mocurly(object):
                     HTTPretty.register_uri(HTTPretty.DELETE, uri_re, body=_callback(self)(extra_route_callback))
                 else:
                     HTTPretty.register_uri(method.method, uri_re, body=_callback(self)(extra_route_callback), content_type="application/xml")
+
+
+class _callback(object):
+    """Decorator for setting up callback functions to be used in the mocurly
+    context.
+
+    This will handle the machinery behind timeout and error simulation.
+    """
+    def __init__(self, mocurly_instance):
+        self.mocurly_instance = mocurly_instance
+
+    def __call__(self, func):
+        def wrapped(request, uri, headers, **kwargs):
+            # If we want to timeout the request, timeout, but only if we aren't
+            # going to allow the POST
+            if (self.mocurly_instance.should_timeout(request) and
+                    not self.mocurly_instance.should_timeout_successful_post(request)):
+                raise ssl.SSLError('The read operation timed out')
+
+            try:
+                return_val = func(request, uri, headers, **kwargs)
+            except ResponseError as exc:
+                # Pass through response errors in a way that httpretty will
+                # respond with the right status code and message
+                if not self.mocurly_instance.should_timeout_successful_post(request):
+                    return exc.status_code, headers, exc.response_body
+
+            if self.mocurly_instance.should_timeout_successful_post(request):
+                raise ssl.SSLError('The read operation timed out')
+
+            return return_val
+        return wrapped
