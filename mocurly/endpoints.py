@@ -1,3 +1,7 @@
+"""Classes used to simulate recurly resources and endpoints
+
+Each endpoint class will define the CRUD interface into the resource.
+"""
 import recurly
 import six
 import random
@@ -7,28 +11,46 @@ import dateutil.parser
 
 from .utils import current_time
 from .errors import TRANSACTION_ERRORS, ResponseError
-from .core import details_route, serialize, serialize_list
+from .utils import details_route, serialize, serialize_list
 from .backend import accounts_backend, billing_info_backend, transactions_backend, invoices_backend, subscriptions_backend, plans_backend, plan_add_ons_backend, adjustments_backend, coupons_backend, coupon_redemptions_backend
 
 class BaseRecurlyEndpoint(object):
+    """Baseclass for simulating resource endpoints.
+
+    Provides basic CRUD functionality given a resource XML template, and object
+    store backend.
+    """
     pk_attr = 'uuid'
     XML = 0
     RAW = 1
 
     def hydrate_foreign_keys(self, obj):
+        """Hydrates all foreign key objects from Id strings into actual objects
+        """
         return obj
 
     def get_object_uri(self, obj):
+        """Returns the URI to access the given object resource
+        """
         cls = self.__class__
         return recurly.base_uri() + cls.base_uri + '/' + obj[cls.pk_attr]
 
     def uris(self, obj):
+        """Returns a dictionary of all URIs related to the object, including foreign keys
+        """
         obj = self.hydrate_foreign_keys(obj)
         uri_out = {}
         uri_out['object_uri'] = self.get_object_uri(obj)
         return uri_out
 
     def serialize(self, obj, format=XML):
+        """Serialize the object into the provided format, using the resource
+        template.
+        
+        Currently only supports XML (for XML representation of the resource.
+        This is what recurly expects) and RAW (a dictionary representation of
+        the resource)
+        """
         if format == BaseRecurlyEndpoint.RAW:
             return obj
 
@@ -42,11 +64,15 @@ class BaseRecurlyEndpoint(object):
             return serialize(cls.template, cls.object_type, obj)
 
     def list(self, format=XML):
+        """Endpoint to list all resources stored in the backend
+        """
         cls = self.__class__
         out = cls.backend.list_objects()
         return self.serialize(out, format=format)
 
     def create(self, create_info, format=XML):
+        """Endpoint to create a new instance of the resource into the backend
+        """
         cls = self.__class__
         if cls.pk_attr in create_info:
             create_info['uuid'] = create_info[cls.pk_attr]
@@ -56,6 +82,10 @@ class BaseRecurlyEndpoint(object):
         return self.serialize(new_obj, format=format)
 
     def retrieve(self, pk, format=XML):
+        """Endpoint to retrieve an existing resource from the backend
+
+        Raises a 404 if the requested object does not exist.
+        """
         cls = self.__class__
         if not cls.backend.has_object(pk):
             raise ResponseError(404, '')
@@ -63,16 +93,30 @@ class BaseRecurlyEndpoint(object):
         return self.serialize(out, format=format)
 
     def update(self, pk, update_info, format=XML):
+        """Endpoint to update an existing resource from the backend
+
+        Raises a 404 if the requested object does not exist.
+        """
         cls = self.__class__
+        if not cls.backend.has_object(pk):
+            raise ResponseError(404, '')
         out = cls.backend.update_object(pk, update_info)
         return self.serialize(out, format=format)
 
     def delete(self, pk):
+        """Endpoint to delete an existing resource from the backend
+
+        Raises a 404 if the requested object does not exist.
+        """
         cls = self.__class__
+        if not cls.backend.has_object(pk):
+            raise ResponseError(404, '')
         cls.backend.delete_object(pk)
         return ''
 
     def generate_id(self):
+        """Generates a random ID that can be used as a UUID or recurly ID
+        """
         return ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(32))
 
 class AccountsEndpoint(BaseRecurlyEndpoint):
@@ -120,6 +164,10 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         billing_info_backend.delete_object(pk)
         return ''
 
+    ### Support for nested resources
+    ### BillingInfo and CouponRedemption are managed by this endpoint, as
+    ### opposed to having their own since Recurly API only provides access to these
+    ### resources through the Account endpoint.
     def billing_info_uris(self, obj):
         uri_out = {}
         uri_out['account_uri'] = recurly.base_uri() + AccountsEndpoint.base_uri + '/' + obj['account']
@@ -204,9 +252,14 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         return super(TransactionsEndpoint, self).__init__()
 
     def clear_state(self):
+        """Clears all registered errors
+        """
         self.registered_errors = {}
 
     def register_transaction_failure(self, account_code, error_code):
+        """Registers an error_code to associate with the given account for all
+        transactions made by the account
+        """
         self.registered_errors[account_code] = error_code
 
     def hydrate_foreign_keys(self, obj):
@@ -232,6 +285,8 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
+        # Like recurly, creates an invoice that is associated with the
+        # transaction
         account_code = create_info['account'][AccountsEndpoint.pk_attr]
         assert AccountsEndpoint.backend.has_object(account_code)
         create_info['account'] = account_code
@@ -284,7 +339,9 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         return super(TransactionsEndpoint, self).create(create_info, format)
 
     def delete(self, pk, amount_in_cents=None):
-        ''' DELETE is a refund action '''
+        """DELETE is a refund action, and as such this will not delete the
+        object from the backend.
+        """
         transaction = TransactionsEndpoint.backend.get_object(pk)
         if transaction['voidable'] and amount_in_cents is None:
             transaction['status'] = 'void'
@@ -572,6 +629,8 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
+        # Like recurly, this will create a new invoice and transaction that
+        # goes with the new subscription enrollment
         account_code = create_info['account'][AccountsEndpoint.pk_attr]
         if not AccountsEndpoint.backend.has_object(account_code):
             accounts_endpoint.create(create_info['account'])
@@ -642,7 +701,8 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         self.hydrate_foreign_keys(new_sub)
 
         if defaults['state'] == 'active':
-            # Setup charges first, to calculate total charge to put on the invoice and transaction
+            # Setup charges first, to calculate total charge to put on the
+            # invoice and transaction
             total = 0
             adjustment_infos = []
             plan_charge_line_item = {
@@ -747,4 +807,7 @@ endpoints = [accounts_endpoint,
         subscriptions_endpoint]
 
 def clear_endpoints():
+    """Clear state off of all endpoints. This ensures that no residual state
+    carries over between mocurly contexts.
+    """
     transactions_endpoint.clear_state()

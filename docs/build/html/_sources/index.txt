@@ -14,11 +14,11 @@ Mocurly
                 <https://github.com/Captricity/mocurly/issues>`_
 
 
-Mocurly is a library that mocks the recurly python client so that you can easily write tests for applications that use the recurly python client.
+Mocurly is a library that mocks the Recurly Python client so that you can easily write tests for applications that use the Recurly Python client.
 
-Mocurly acts as a mock backend for the recurly client, allowing you to use the recurly python client AS IS. This means that all your code that uses the recurly python client and targets recurly objects will all work as you would expect. Best of all: you can use the recurly python client to setup the test environment!
+Mocurly acts as a mock backend for the Recurly client, allowing you to use the Recurly Python client AS IS. This means that all your code that uses the Recurly Python client and targets Recurly objects will all work as you would expect. Best of all: you can use the Recurly Python client to setup the test environment!
 
-For example, suppose you had a simple function in your app that lists all the users in recurly, and counts them:
+For example, suppose you had a simple function in your app that lists all the users in Recurly, and counts them:
 
 ::
 
@@ -29,7 +29,7 @@ For example, suppose you had a simple function in your app that lists all the us
   def count_recurly_accounts():
       return len(recurly.Account.all())
 
-With mocurly, you can test the above code like so:
+With Mocurly, you can test the above code like so:
 
 ::
 
@@ -45,7 +45,7 @@ With mocurly, you can test the above code like so:
           recurly.Account(account_code=str(i)).save()
       assert count_recurly_accounts() == 10
 
-Within the decorator context, all calls to recurly are captured by mocurly, which keeps the state in memory for the duration of the context. No actual web calls are made, allowing you to test your recurly code without worrying about existing context or internet connections.
+Within the decorator context, all calls to Recurly are captured by Mocurly, which keeps the state in memory for the duration of the context. No actual web calls are made, allowing you to test your Recurly code without worrying about existing context or internet connections.
 
 
 
@@ -54,6 +54,7 @@ Usage
 
 .. toctree::
 
+   api-documentation
    basic-usage
    advanced-usage
 

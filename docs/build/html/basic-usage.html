@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="mocurly 0.1 documentation" href="index.html" />
     <link rel="next" title="Advanced Usage" href="advanced-usage.html" />
-    <link rel="prev" title="Mocurly" href="index.html" /> 
+    <link rel="prev" title="API Documentation" href="api-documentation.html" /> 
   </head>
   <body>
     <div class="related">
@@ -38,7 +38,7 @@
           <a href="advanced-usage.html" title="Advanced Usage"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="index.html" title="Mocurly"
+          <a href="api-documentation.html" title="API Documentation"
              accesskey="P">previous</a> |</li>
         <li><a href="index.html">mocurly 0.1 documentation</a> &raquo;</li> 
       </ul>
@@ -51,8 +51,8 @@
             
   <div class="section" id="basic-usage">
 <h1>Basic Usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h1>
-<p>Mocurly is designed to be used as a wrapper around blocks of code that needs the mocked recurly context. Within the context, all calls made using the recurly python client will talk to the mocked in-memory service instead of the real recurly.</p>
-<p>In the following example, the call to the <tt class="xref py py-meth docutils literal"><span class="pre">save()</span></tt> method of the <tt class="xref py py-class docutils literal"><span class="pre">recurly.Account</span></tt> class will create an instance of the account object in mocurly&#8217;s in-memory database, but not in your recurly account:</p>
+<p>Mocurly is designed to be used as a wrapper around blocks of code that needs the mocked Recurly context. Within the context, all calls made using the Recurly Python client will talk to the mocked in-memory service instead of the real Recurly.</p>
+<p>In the following example, the call to the <tt class="xref py py-meth docutils literal"><span class="pre">save()</span></tt> method of the <tt class="xref py py-class docutils literal"><span class="pre">recurly.Account</span></tt> class will create an instance of the account object in Mocurly&#8217;s in-memory database, but not in your Recurly account:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">recurly</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">API_KEY</span> <span class="o">=</span> <span class="s">&#39;foo&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">recurly</span><span class="o">.</span><span class="n">SUBDOMAIN</span> <span class="o">=</span> <span class="s">&#39;bar&#39;</span>
@@ -61,9 +61,10 @@
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">recurly</span><span class="o">.</span><span class="n">Account</span><span class="p">(</span><span class="n">account_code</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>Mocurly can be used as a decorator, context manager, or manually. In all 3 cases, the mocurly context is reset at the start of the invocation.</p>
+<p>Note that you still have to set the <cite>API_KEY</cite> and <cite>SUBDOMAIN</cite> on the Recurly instance, since the Recurly client itself has assertions to make sure they are set. However, the values you use do not matter. They also can be set outside the Mocurly context, as in the example.</p>
+<p>Mocurly can be used as a decorator, context manager, or manually. In all 3 cases, the Mocurly context is reset at the start of the invocation.</p>
 <div class="section" id="mocurly-as-decorator">
-<h2>mocurly as decorator<a class="headerlink" href="#mocurly-as-decorator" title="Permalink to this headline">¶</a></h2>
+<h2>Mocurly as decorator<a class="headerlink" href="#mocurly-as-decorator" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@mocurly</span>
 <span class="k">def</span> <span class="nf">test_count_recurly_accounts</span><span class="p">():</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
@@ -73,7 +74,7 @@
 </div>
 </div>
 <div class="section" id="mocurly-as-context-manager">
-<h2>mocurly as context manager<a class="headerlink" href="#mocurly-as-context-manager" title="Permalink to this headline">¶</a></h2>
+<h2>Mocurly as context manager<a class="headerlink" href="#mocurly-as-context-manager" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">test_count_recurly_accounts</span><span class="p">():</span>
     <span class="k">with</span> <span class="n">mocurly</span><span class="p">():</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
@@ -83,7 +84,7 @@
 </div>
 </div>
 <div class="section" id="mocurly-used-manually">
-<h2>mocurly used manually<a class="headerlink" href="#mocurly-used-manually" title="Permalink to this headline">¶</a></h2>
+<h2>Mocurly used manually<a class="headerlink" href="#mocurly-used-manually" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">test_count_recurly_accounts</span><span class="p">():</span>
     <span class="n">mocurly_</span> <span class="o">=</span> <span class="n">mocurly</span><span class="p">()</span>
     <span class="n">mocurly_</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
@@ -107,16 +108,16 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Basic Usage</a><ul>
-<li><a class="reference internal" href="#mocurly-as-decorator">mocurly as decorator</a></li>
-<li><a class="reference internal" href="#mocurly-as-context-manager">mocurly as context manager</a></li>
-<li><a class="reference internal" href="#mocurly-used-manually">mocurly used manually</a></li>
+<li><a class="reference internal" href="#mocurly-as-decorator">Mocurly as decorator</a></li>
+<li><a class="reference internal" href="#mocurly-as-context-manager">Mocurly as context manager</a></li>
+<li><a class="reference internal" href="#mocurly-used-manually">Mocurly used manually</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="index.html"
-                        title="previous chapter">Mocurly</a></p>
+  <p class="topless"><a href="api-documentation.html"
+                        title="previous chapter">API Documentation</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="advanced-usage.html"
                         title="next chapter">Advanced Usage</a></p>
@@ -152,7 +153,7 @@
           <a href="advanced-usage.html" title="Advanced Usage"
              >next</a> |</li>
         <li class="right" >
-          <a href="index.html" title="Mocurly"
+          <a href="api-documentation.html" title="API Documentation"
              >previous</a> |</li>
         <li><a href="index.html">mocurly 0.1 documentation</a> &raquo;</li> 
       </ul>

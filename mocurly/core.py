@@ -1,25 +1,25 @@
+"""Core functions used to interface into mocurly
+
+Exposes the main mocurly class which is the gateway into setting up the mocurly
+context.
+"""
+
 import recurly
 import re
 import ssl
-import xml.dom.minidom as minidom
 from six.moves.urllib.parse import urlparse, parse_qs
 from httpretty import HTTPretty
-from jinja2 import Environment, PackageLoader
-jinja2_env = Environment(loader=PackageLoader('mocurly', 'templates'), extensions=['jinja2.ext.with_'])
 
+from .utils import deserialize
 from .errors import ResponseError
 from .backend import clear_backends
 
-def details_route(method, uri, is_list=False):
-    def details_route_decorator(func):
-        func.is_route = True
-        func.method = method
-        func.uri = uri
-        func.is_list = is_list
-        return func
-    return details_route_decorator
+class _callback(object):
+    """Decorator for setting up callback functions to be used in the mocurly
+    context.
 
-class callback(object):
+    This will handle the machinery behind timeout and error simulation.
+    """
     def __init__(self, mocurly_instance):
         self.mocurly_instance = mocurly_instance
 
@@ -34,6 +34,8 @@ class callback(object):
             try:
                 return_val = func(request, uri, headers, **kwargs)
             except ResponseError as exc:
+                # Pass through response errors in a way that httpretty will
+                # respond with the right status code and message
                 if not self.mocurly_instance.should_timeout_successful_post(request):
                     return exc.status_code, headers, exc.response_body
 
@@ -43,48 +45,13 @@ class callback(object):
             return return_val
         return wrapped
 
-def serialize_list(template, object_type_plural, object_type, object_list):
-    serialized_obj_list = []
-    for obj in object_list:
-        serialized_obj_list.append(serialize(template, object_type, obj))
-    return '<{0} type="array">{1}</{0}>'.format(object_type_plural, ''.join(serialized_obj_list)), len(serialized_obj_list)
-
-def serialize(template, object_type, object_dict):
-    # Takes in the object type + dictionary representation and returns the XML
-    template = jinja2_env.get_template(template)
-    kwargs = {}
-    kwargs[object_type] = object_dict
-    return template.render(**kwargs)
-
-def deserialize(xml):
-    # Takes in XML and returns: object type + dictionary representation
-    parsed_xml = minidom.parseString(xml)
-    assert len(parsed_xml.childNodes) == 1 # only know of xml input with 1 child node, since thats all there is to recurly
-    root = parsed_xml.firstChild
-    if root.hasAttribute('type') and root.getAttribute('type') == 'array':
-        return _deserialize_list(root)
-    else:
-        return _deserialize_item(root)
-
-def _deserialize_list(root):
-    return [_deserialize_item(node)[1] for node in root.childNodes]
-
-def _deserialize_item(root):
-    object_type = root.tagName
-    obj = {}
-    for node in root.childNodes:
-        if node.hasAttribute('nil'):
-            obj[node.tagName] = None
-        elif len(node.childNodes) == 1 and node.childNodes[0].nodeType == minidom.Node.TEXT_NODE:
-            obj[node.tagName] = node.firstChild.nodeValue
-        elif node.hasAttribute('type') and node.getAttribute('type') == 'array':
-            obj[node.tagName] = _deserialize_list(node)
-        else:
-            child_object_type, child_object = _deserialize_item(node)
-            obj[node.tagName] = child_object
-    return object_type, obj
-
 class mocurly(object):
+    """Main class that provides the mocked context.
+
+    This can be used as a decorator, as a context manager, or manually. In all
+    three cases, the guarded context will route all recurly requests to the
+    mocked callback functions defined in endpoints.py.
+    """
     def __init__(self, func=None):
         self.started = False
         HTTPretty.reset()
@@ -109,6 +76,9 @@ class mocurly(object):
         self.stop()
 
     def start(self):
+        """Starts the mocked context by enabling HTTPretty to route requests to
+        the defined endpoints.
+        """
         from .endpoints import clear_endpoints
         self.started = True
         clear_endpoints()
@@ -120,12 +90,37 @@ class mocurly(object):
         self._register()
 
     def stop(self):
+        """Stops the mocked context, restoring the routes back to what they were
+        """
         if not self.started:
             raise RuntimeError('Called stop() before start()')
 
         HTTPretty.disable()
 
     def start_timeout(self, timeout_filter=None):
+        """Notifies mocurly to start simulating time outs within the current
+        context.
+
+        You can pass in a filter function which will be used to decide what
+        requests to timeout. The function will get one parameter, `request`,
+        which is an instance of the HTTPrettyRequest class, and should return a
+        boolean which when True, the request will time out.
+
+        The following attributes are available on the request object:
+            `headers` -> a mimetype object that can be cast into a dictionary,
+            contains all the request headers.
+
+            `method` -> the HTTP method used in this request.
+
+            `path` -> the full path to the requested URI.
+
+            `querystring` -> a dictionary containing lists with the attributes.
+
+            `body` -> the raw contents of the request body.
+
+            `parsed_body` -> a dictionary containing parsed request body or
+                `None` if `HTTPrettyRequest` doesn't know how to parse it.
+        """
         self.timeout_filter = timeout_filter
         self.timeout_connection = True
 
@@ -135,10 +130,19 @@ class mocurly(object):
         return False
 
     def stop_timeout(self):
+        """Notifies mocurly to stop simulating time outs within the current
+        context.
+        """
         self.timeout_filter = None
         self.timeout_connection = False
 
     def start_timeout_successful_post(self, timeout_filter=None):
+        """Notifies mocurly to make timeouts on POST requests, but only after
+        it has caused state changes.
+
+        Like `start_timeout`, you can pass in a filter function used to decide
+        which requests to cause the timeout on.
+        """
         self.timeout_filter = timeout_filter
         self.timeout_connection_successful_post = True
 
@@ -151,14 +155,25 @@ class mocurly(object):
         return False
 
     def stop_timeout_successful_post(self):
+        """Notifies mocurly to stop simulating successful POST time outs within
+        the current context.
+        """
         self.timeout_filter = None
         self.timeout_connection_successful_post = False
 
     def register_transaction_failure(self, account_code, error_code):
+        """Register a transaction failure for the given account.
+
+        This will setup mocurly such that all transactions made by the account
+        with the given `account_code` will fail with the selected `error_code`.
+        """
         from .endpoints import transactions_endpoint
         transactions_endpoint.register_transaction_failure(account_code, error_code)
 
     def _register(self):
+        """Walks the endpoints to register all its URIs to HTTPretty so that
+        they can mock recurly requests.
+        """
         from .endpoints import endpoints
         for endpoint in endpoints:
             # register list views
@@ -168,11 +183,11 @@ class mocurly(object):
                 xml, item_count = endpoint.list()
                 headers['X-Records'] = item_count
                 return 200, headers, xml
-            HTTPretty.register_uri(HTTPretty.GET, list_uri, body=callback(self)(list_callback), content_type="application/xml")
+            HTTPretty.register_uri(HTTPretty.GET, list_uri, body=_callback(self)(list_callback), content_type="application/xml")
 
             def create_callback(request, uri, headers, endpoint=endpoint):
                 return 200, headers, endpoint.create(deserialize(request.body)[1])
-            HTTPretty.register_uri(HTTPretty.POST, list_uri, body=callback(self)(create_callback), content_type="application/xml")
+            HTTPretty.register_uri(HTTPretty.POST, list_uri, body=_callback(self)(create_callback), content_type="application/xml")
 
             # register details views
             detail_uri = recurly.base_uri() + endpoint.base_uri + r'/([^/ ]+)'
@@ -181,19 +196,19 @@ class mocurly(object):
             def retrieve_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
                 pk = detail_uri_re.match(uri).group(1)
                 return 200, headers, endpoint.retrieve(pk)
-            HTTPretty.register_uri(HTTPretty.GET, detail_uri_re, body=callback(self)(retrieve_callback), content_type="application/xml")
+            HTTPretty.register_uri(HTTPretty.GET, detail_uri_re, body=_callback(self)(retrieve_callback), content_type="application/xml")
 
             def update_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
                 pk = detail_uri_re.match(uri).group(1)
                 return 200, headers, endpoint.update(pk, deserialize(request.body)[1])
-            HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=callback(self)(update_callback), content_type="application/xml")
+            HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=_callback(self)(update_callback), content_type="application/xml")
 
             def delete_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
                 parsed_url = urlparse(uri)
                 pk = detail_uri_re.match('{0}://{1}{2}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
                 endpoint.delete(pk, **parse_qs(parsed_url.query))
                 return 204, headers, ''
-            HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=callback(self)(delete_callback))
+            HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=_callback(self)(delete_callback))
 
             # register extra views
             for method in filter(lambda method: callable(method) and getattr(method, 'is_route', False), (getattr(endpoint, m) for m in dir(endpoint))):
@@ -218,6 +233,6 @@ class mocurly(object):
                         result = method(pk)
                     return status, headers, result
                 if method.method == 'DELETE':
-                    HTTPretty.register_uri(HTTPretty.DELETE, uri_re, body=callback(self)(extra_route_callback))
+                    HTTPretty.register_uri(HTTPretty.DELETE, uri_re, body=_callback(self)(extra_route_callback))
                 else:
-                    HTTPretty.register_uri(method.method, uri_re, body=callback(self)(extra_route_callback), content_type="application/xml")
+                    HTTPretty.register_uri(method.method, uri_re, body=_callback(self)(extra_route_callback), content_type="application/xml")

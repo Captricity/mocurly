@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>API Documentation &mdash; mocurly 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="mocurly 0.1 documentation" href="index.html" />
+    <link rel="next" title="Basic Usage" href="basic-usage.html" />
+    <link rel="prev" title="Mocurly" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="basic-usage.html" title="Basic Usage"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Mocurly"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">mocurly 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-mocurly">
+<span id="api-documentation"></span><h1>API Documentation<a class="headerlink" href="#module-mocurly" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="mocurly.mocurly">
+<em class="property">class </em><tt class="descclassname">mocurly.</tt><tt class="descname">mocurly</tt><big>(</big><em>func=None</em><big>)</big><a class="headerlink" href="#mocurly.mocurly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main class that provides the mocked context.</p>
+<p>This can be used as a decorator, as a context manager, or manually. In all
+three cases, the guarded context will route all recurly requests to the
+mocked callback functions defined in endpoints.py.</p>
+<dl class="method">
+<dt id="mocurly.mocurly.register_transaction_failure">
+<tt class="descname">register_transaction_failure</tt><big>(</big><em>account_code</em>, <em>error_code</em><big>)</big><a class="headerlink" href="#mocurly.mocurly.register_transaction_failure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a transaction failure for the given account.</p>
+<p>This will setup mocurly such that all transactions made by the account
+with the given <cite>account_code</cite> will fail with the selected <cite>error_code</cite>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mocurly.mocurly.start">
+<tt class="descname">start</tt><big>(</big><big>)</big><a class="headerlink" href="#mocurly.mocurly.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starts the mocked context by enabling HTTPretty to route requests to
+the defined endpoints.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mocurly.mocurly.start_timeout">
+<tt class="descname">start_timeout</tt><big>(</big><em>timeout_filter=None</em><big>)</big><a class="headerlink" href="#mocurly.mocurly.start_timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Notifies mocurly to start simulating time outs within the current
+context.</p>
+<p>You can pass in a filter function which will be used to decide what
+requests to timeout. The function will get one parameter, <cite>request</cite>,
+which is an instance of the HTTPrettyRequest class, and should return a
+boolean which when True, the request will time out.</p>
+<dl class="docutils">
+<dt>The following attributes are available on the request object:</dt>
+<dd><p class="first"><cite>headers</cite> -&gt; a mimetype object that can be cast into a dictionary,
+contains all the request headers.</p>
+<p><cite>method</cite> -&gt; the HTTP method used in this request.</p>
+<p><cite>path</cite> -&gt; the full path to the requested URI.</p>
+<p><cite>querystring</cite> -&gt; a dictionary containing lists with the attributes.</p>
+<p><cite>body</cite> -&gt; the raw contents of the request body.</p>
+<dl class="last docutils">
+<dt><cite>parsed_body</cite> -&gt; a dictionary containing parsed request body or</dt>
+<dd><cite>None</cite> if <cite>HTTPrettyRequest</cite> doesn&#8217;t know how to parse it.</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mocurly.mocurly.start_timeout_successful_post">
+<tt class="descname">start_timeout_successful_post</tt><big>(</big><em>timeout_filter=None</em><big>)</big><a class="headerlink" href="#mocurly.mocurly.start_timeout_successful_post" title="Permalink to this definition">¶</a></dt>
+<dd><p>Notifies mocurly to make timeouts on POST requests, but only after
+it has caused state changes.</p>
+<p>Like <cite>start_timeout</cite>, you can pass in a filter function used to decide
+which requests to cause the timeout on.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mocurly.mocurly.stop">
+<tt class="descname">stop</tt><big>(</big><big>)</big><a class="headerlink" href="#mocurly.mocurly.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops the mocked context, restoring the routes back to what they were</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mocurly.mocurly.stop_timeout">
+<tt class="descname">stop_timeout</tt><big>(</big><big>)</big><a class="headerlink" href="#mocurly.mocurly.stop_timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Notifies mocurly to stop simulating time outs within the current
+context.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mocurly.mocurly.stop_timeout_successful_post">
+<tt class="descname">stop_timeout_successful_post</tt><big>(</big><big>)</big><a class="headerlink" href="#mocurly.mocurly.stop_timeout_successful_post" title="Permalink to this definition">¶</a></dt>
+<dd><p>Notifies mocurly to stop simulating successful POST time outs within
+the current context.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Mocurly</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="basic-usage.html"
+                        title="next chapter">Basic Usage</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/api-documentation.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="basic-usage.html" title="Basic Usage"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Mocurly"
+             >previous</a> |</li>
+        <li><a href="index.html">mocurly 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Captricity.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>
