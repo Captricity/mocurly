@@ -37,7 +37,8 @@ class TestTransaction(unittest.TestCase):
 
         self.base_transaction_data = {
                 'amount_in_cents': 100,
-                'currency': 'USD'
+                'currency': 'USD',
+                'description': 'foo'
             }
 
         self.base_invoice_data = {
@@ -114,6 +115,16 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(new_invoice_backed['tax_type'], 'usst')
         self.assertEqual(new_invoice_backed['tax_rate'], 0)
         self.assertEqual(new_invoice_backed['net_terms'], 0)
+
+        line_items = new_invoice.line_items
+        self.assertEqual(len(line_items), 1)
+        new_line_item_backed = mocurly.backend.adjustments_backend.get_object(line_items[0].uuid)
+        self.assertEqual(new_line_item_backed['description'], self.base_transaction_data['description'])
+        self.assertEqual(new_line_item_backed['unit_amount_in_cents'], self.base_transaction_data['amount_in_cents'])
+        self.assertEqual(new_line_item_backed['total_in_cents'], self.base_transaction_data['amount_in_cents'])
+        self.assertEqual(new_line_item_backed['currency'], self.base_transaction_data['currency'])
+        self.assertEqual(new_line_item_backed['type'], 'charge')
+        self.assertEqual(new_line_item_backed['tax_in_cents'], 0)
 
     def test_transaction_void(self):
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)

@@ -303,6 +303,8 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         create_info['refundable'] = True
         create_info['created_at'] = current_time().isoformat()
         create_info['type'] = 'credit_card'
+        if 'description' not in create_info:
+            create_info['description'] = ''
 
         # Check to see if we need to throw an error for card failure
         if create_info['account'] in self.registered_errors:
@@ -335,8 +337,19 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         new_invoice['total_in_cents'] = new_invoice['subtotal_in_cents'] + new_invoice['tax_in_cents']
         new_invoice['transactions'] = [create_info['uuid']]
         InvoicesEndpoint.backend.add_object(new_invoice['invoice_number'], new_invoice)
+        new_invoice_id = new_invoice[InvoicesEndpoint.pk_attr]
 
-        create_info['invoice'] = new_invoice[InvoicesEndpoint.pk_attr]
+        # Every transaction should have a line item as well
+        transaction_charge_line_item = {'account_code': new_invoice['account'],
+                                        'currency': new_invoice['currency'],
+                                        'unit_amount_in_cents': int(new_invoice['total_in_cents']),
+                                        'description': create_info['description'],
+                                        'quantity': 1,
+                                        'invoice': new_invoice_id}
+        transaction_charge_line_item = adjustments_endpoint.create(transaction_charge_line_item, format=BaseRecurlyEndpoint.RAW)
+        InvoicesEndpoint.backend.update_object(new_invoice_id, {'line_items': [transaction_charge_line_item]})
+
+        create_info['invoice'] = new_invoice_id
         return super(TransactionsEndpoint, self).create(create_info, format)
 
     def delete(self, pk, amount_in_cents=None):

@@ -10,6 +10,7 @@ Mocurly
 :Download: `PyPI
            <https://pypi.python.org/pypi/mocurly>`_
 :License: `MIT License`_
+:Change log: :ref:`change-log`
 :Issue tracker: `Github issues
                 <https://github.com/Captricity/mocurly/issues>`_
 
@@ -57,7 +58,6 @@ Usage
    api-documentation
    basic-usage
    advanced-usage
-
 
 .. _MIT License:
 
