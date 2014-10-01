@@ -5,6 +5,8 @@ mocurly
 
 Mocurly is a library that mocks the recurly python client so that you can easily write tests for applications that use the recurly python client.
 
+Full documentation is available at [readthedocs](http://mocurly.readthedocs.org/en/latest/).
+
 Overview
 ========
 Mocurly acts as a mock backend for the recurly client, allowing you to use the recurly python client AS IS. This means that all your code that uses the recurly python client and targets recurly objects will all work as you would expect. Best of all: you can use the recurly python client to setup the test environment!
