@@ -1,5 +1,6 @@
 import unittest
 import datetime
+import operator
 import iso8601
 import recurly
 recurly.API_KEY = 'blah'
@@ -262,3 +263,30 @@ class TestAccount(unittest.TestCase):
 
         self.assertEqual(len(accounts), 3)
         self.assertEqual(set([account.account_code for account in accounts]), set(['foo', 'bar', 'blah']))
+
+    def test_invoice_list(self):
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
+        base_invoice_data = {
+                'account': self.base_account_data['account_code'],
+                'uuid': 'foo',
+                'state': 'collected',
+                'invoice_number': '1234',
+                'subtotal_in_cents': 1000,
+                'currency': 'USD',
+                'created_at': '2014-08-11',
+                'net_terms': 0,
+                'collection_method': 'automatic',
+
+                'tax_type': 'usst',
+                'tax_rate': 0,
+                'tax_in_cents': 0,
+                'total_in_cents': 1000,
+            }
+        mocurly.backend.invoices_backend.add_object('1234', base_invoice_data)
+        base_invoice_data['invoice_number'] = '1235'
+        mocurly.backend.invoices_backend.add_object('1235', base_invoice_data)
+
+        account = recurly.Account.get(self.base_account_data['account_code'])
+        invoices = account.invoices()
+        self.assertEqual(len(invoices), 2)
+        self.assertEqual(set(map(operator.attrgetter('invoice_number'), invoices)), set([1234, 1235]))

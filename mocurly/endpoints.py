@@ -203,6 +203,11 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         out = TransactionsEndpoint.backend.list_objects(lambda transaction: transaction['account'] == pk)
         return transactions_endpoint.serialize(out, format=format)
 
+    @details_route('GET', 'invoices', is_list=True)
+    def get_invoices_list(self, pk, filters=None, format=BaseRecurlyEndpoint.XML):
+        out = InvoicesEndpoint.backend.list_objects(lambda invoice: invoice['account'] == pk)
+        return invoices_endpoint.serialize(out, format=format)
+
     @details_route('GET', 'subscriptions', is_list=True)
     def get_subscriptions_list(self, pk, filters=None, format=BaseRecurlyEndpoint.XML):
         def filter_subscriptions(subscription):
