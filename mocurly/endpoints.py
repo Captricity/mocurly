@@ -358,33 +358,9 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         return super(TransactionsEndpoint, self).create(create_info, format)
 
     def delete(self, pk, amount_in_cents=None):
-        """DELETE is a refund action, and as such this will not delete the
-        object from the backend.
+        """As of Nov. 2014, DELETE on transactions is no longer implemented
         """
-        transaction = TransactionsEndpoint.backend.get_object(pk)
-        if transaction['voidable'] and amount_in_cents is None:
-            transaction['status'] = 'void'
-            transaction['voidable'] = False
-            transaction['refundable'] = False
-            TransactionsEndpoint.backend.update_object(pk, transaction)
-        elif transaction['refundable']:
-            refund_transaction = transaction.copy()
-            refund_transaction['uuid'] = self.generate_id()
-            refund_transaction['type'] = 'refund'
-            refund_transaction['voidable'] = False
-            refund_transaction['refundable'] = False
-            if amount_in_cents is not None:
-                refund_transaction['amount_in_cents'] = amount_in_cents
-            TransactionsEndpoint.backend.add_object(refund_transaction['uuid'], refund_transaction)
-            # Refunded, so now its no longer refundable
-            TransactionsEndpoint.backend.update_object(transaction['uuid'], {'refundable': False})
-
-            invoice = InvoicesEndpoint.backend.get_object(transaction['invoice'])
-            InvoicesEndpoint.backend.update_object(transaction['invoice'], {'transactions': invoice['transactions'] + [refund_transaction['uuid']]})
-        else:
-            # TODO: raise exception - transaction cannot be refunded
-            pass
-        return ''
+        raise ResponseError(404, '')
 
 
 class AdjustmentsEndpoint(BaseRecurlyEndpoint):

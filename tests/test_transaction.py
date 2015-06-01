@@ -126,7 +126,9 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(new_line_item_backed['type'], 'charge')
         self.assertEqual(new_line_item_backed['tax_in_cents'], 0)
 
-    def test_transaction_void(self):
+    def test_transaction_refund_deprecation(self):
+        """Tests that the old transaction refund interface no longer exists in mocurly
+        """
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
 
         self.base_transaction_data['uuid'] = '1234'
@@ -141,53 +143,8 @@ class TestTransaction(unittest.TestCase):
         mocurly.backend.transactions_backend.add_object('1234', self.base_transaction_data)
 
         transaction = recurly.Transaction.get('1234')
-        transaction.refund()
-
-        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
-        voided_transaction = mocurly.backend.transactions_backend.get_object('1234')
-        for k, v in self.base_transaction_data.items():
-            if k in ['voidable', 'refundable']:
-                self.assertEqual(voided_transaction[k], False) # already refunded
-            elif k == 'status':
-                self.assertEqual(voided_transaction[k], 'void') # is now voided
-            else:
-                self.assertEqual(voided_transaction[k], v)
-
-    def test_transaction_refund(self):
-        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
-
-        mocurly.backend.invoices_backend.add_object('1234', self.base_invoice_data)
-
-        self.base_transaction_data['uuid'] = '1234'
-        self.base_transaction_data['account'] = self.base_account_data['uuid']
-        self.base_transaction_data['test'] = True
-        self.base_transaction_data['voidable'] = False
-        self.base_transaction_data['refundable'] = True
-        self.base_transaction_data['tax_in_cents'] = 0
-        self.base_transaction_data['action'] = 'purchase'
-        self.base_transaction_data['status'] = 'success'
-        self.base_transaction_data['created_at'] = '2014-08-11'
-        self.base_transaction_data['invoice'] = '1234'
-        mocurly.backend.transactions_backend.add_object('1234', self.base_transaction_data)
-
-        transaction = recurly.Transaction.get('1234')
-        transaction.refund()
-
-        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 2)
-        voided_transaction = mocurly.backend.transactions_backend.get_object('1234')
-        for k, v in self.base_transaction_data.items():
-            if k in ['voidable', 'refundable']:
-                self.assertFalse(voided_transaction[k]) # already refunded
-            else:
-                self.assertEqual(voided_transaction[k], v)
-
-        invoice = transaction.invoice()
-        transactions = invoice.transactions
-        self.assertEqual(len(transactions), 2)
-        refund_transaction = filter(lambda trans: trans.uuid != '1234', invoice.transactions)[0]
-        self.assertEqual(refund_transaction.type, 'refund')
-        self.assertFalse(refund_transaction.voidable)
-        self.assertFalse(refund_transaction.refundable)
+        with self.assertRaises(recurly.NotFoundError):
+            transaction.refund()
 
     def test_transaction_list(self):
         self.base_transaction_data['uuid'] = '1234'
