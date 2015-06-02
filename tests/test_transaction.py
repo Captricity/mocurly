@@ -215,6 +215,7 @@ class TestTransaction(unittest.TestCase):
             else:
                 refund_adjustment = adjustment
         self.assertEqual(original_adjustment['total_in_cents'], -refund_adjustment['total_in_cents'])
+        self.assertEqual(int(original_adjustment['quantity']), -int(refund_adjustment['quantity']))
 
         transaction = recurly.Transaction.get('1234')
         self.assertEqual(transaction.status, 'void')

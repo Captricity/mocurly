@@ -482,7 +482,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
                                        'currency': new_invoice['currency'],
                                        'unit_amount_in_cents': int(new_invoice['total_in_cents']),
                                        'description': 'Refund for {}'.format(line_item['description']),
-                                       'quantity': quantity_to_refund,
+                                       'quantity': -int(quantity_to_refund),
                                        'invoice': new_invoice_id}
             charge_refund_line_item = adjustments_endpoint.create(charge_refund_line_item, format=BaseRecurlyEndpoint.RAW)
             refund_line_items.append(charge_refund_line_item)
