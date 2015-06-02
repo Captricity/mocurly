@@ -435,6 +435,72 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
             uri_out['subscription_uri'] = subscriptions_endpoint.get_object_uri({'uuid': obj['subscription']})
         return uri_out
 
+    @details_route('POST', 'refund')
+    def refund_invoice_line_items(self, pk, refund_info, format=BaseRecurlyEndpoint.XML):
+        """Refunds the given line items on the invoice.
+
+        The outcome will:
+        - Create a new invoice with adjustments that cancel out the original
+          invoice (invoice_number = pk)
+        - Updates the state of associated objects
+        """
+        invoice = InvoicesEndpoint.backend.get_object(pk)
+        # Hack to get around the singleton hydration of XML
+        if isinstance(refund_info['line_items'], dict):
+            refund_info['line_items'] = [refund_info['line_items']]
+
+        # New invoice tracking refund
+        new_invoice = {'account': invoice['account'],
+                       'uuid': self.generate_id(),
+                       'state': 'collected',
+                       'invoice_number': InvoicesEndpoint.generate_invoice_number(),
+                       'subtotal_in_cents': -int(invoice['subtotal_in_cents']),
+                       'currency': invoice['currency'],
+                       'created_at': current_time().isoformat(),
+                       'net_terms': 0,
+                       'collection_method': 'automatic',
+                       'transactions': invoice['transactions'],
+
+                       # unsupported
+                       'tax_type': 'usst',
+                       'tax_rate': 0}
+        new_invoice['tax_in_cents'] = new_invoice['subtotal_in_cents'] * new_invoice['tax_rate']
+        new_invoice['total_in_cents'] = new_invoice['subtotal_in_cents'] + new_invoice['tax_in_cents']
+        InvoicesEndpoint.backend.add_object(new_invoice['invoice_number'], new_invoice)
+        new_invoice_id = new_invoice[InvoicesEndpoint.pk_attr]
+
+        # Create adjustment line items for refund and add it to created invoice object
+        refund_line_items = []
+        for line_item in refund_info['line_items']:
+            quantity_to_refund = line_item['adjustment']['quantity']
+            # TODO: add logic for prorate
+            line_item = AdjustmentsEndpoint.backend.get_object(line_item['adjustment']['uuid'])
+
+            assert int(quantity_to_refund) <= int(line_item['quantity'])
+
+            charge_refund_line_item = {'account_code': new_invoice['account'],
+                                       'currency': new_invoice['currency'],
+                                       'unit_amount_in_cents': int(new_invoice['total_in_cents']),
+                                       'description': 'Refund for {}'.format(line_item['description']),
+                                       'quantity': quantity_to_refund,
+                                       'invoice': new_invoice_id}
+            charge_refund_line_item = adjustments_endpoint.create(charge_refund_line_item, format=BaseRecurlyEndpoint.RAW)
+            refund_line_items.append(charge_refund_line_item)
+        new_invoice = InvoicesEndpoint.backend.update_object(new_invoice_id, {'line_items': refund_line_items})
+
+        # Update state of any associated objects
+        #   If invoice is with transaction, then void/refund the transaction
+        transactions = invoice['transactions']
+        for transaction in transactions:
+            TransactionsEndpoint.backend.update_object(transaction, {'status': 'void',
+                                                                     'voidable': False,
+                                                                     'refundable': False # TODO: only for full refunds
+                                                                    })
+        #   If invoice is with subscription, then update subscription state
+        # TODO
+
+        return self.serialize(new_invoice)
+
     @staticmethod
     def generate_invoice_number():
         if InvoicesEndpoint.backend.empty():
