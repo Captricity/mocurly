@@ -867,6 +867,8 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         subscription = SubscriptionsEndpoint.backend.get_object(pk)
         # assume base transaction exists
         transaction = TransactionsEndpoint.backend.list_objects(lambda trans: trans['subscription'] == subscription[SubscriptionsEndpoint.pk_attr])[0]
+        invoice_number = transaction['invoice']
+        invoice = InvoicesEndpoint.backend.get_object(invoice_number)
         start = self._parse_isoformat(subscription['current_period_started_at'])
         end = self._parse_isoformat(subscription['current_period_ends_at'])
         now = current_time()
@@ -877,9 +879,15 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             days_left = (end - now).days
             total_days = (end - start).days
             refund_amount = int((days_left / total_days) * transaction['amount_in_cents'])
-            transactions_endpoint.delete(transaction[TransactionsEndpoint.pk_attr], amount_in_cents=refund_amount)
+            invoice_number = transaction['invoice']
+            invoices_endpoint.refund_invoice(invoice_number, {'amount_in_cents': refund_amount})
         elif refund_type == 'full':
-            transactions_endpoint.delete(transaction[TransactionsEndpoint.pk_attr])
+            adjustments_to_refund = []
+            for line_item in invoice['line_items']:
+                adjustments_to_refund.append({
+                    'adjustment': AdjustmentsEndpoint.backend.get_object(line_item)
+                })
+            invoices_endpoint.refund_invoice(invoice_number, {'line_items': adjustments_to_refund})
 
         return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
             'state': 'expired',
