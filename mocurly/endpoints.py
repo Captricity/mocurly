@@ -436,8 +436,12 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
         return uri_out
 
     @details_route('POST', 'refund')
-    def refund_invoice_line_items(self, pk, refund_info, format=BaseRecurlyEndpoint.XML):
-        """Refunds the given line items on the invoice.
+    def refund_invoice(self, pk, refund_info, format=BaseRecurlyEndpoint.XML):
+        """Refunds the invoice.
+
+        There are two ways this can happen:
+        - Refund individual line items on the invoice
+        - Refund a specific amount
 
         The outcome will:
         - Create a new invoice with adjustments that cancel out the original
@@ -445,9 +449,46 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
         - Updates the state of associated objects
         """
         invoice = InvoicesEndpoint.backend.get_object(pk)
-        # Hack to get around the singleton hydration of XML
-        if isinstance(refund_info['line_items'], dict):
-            refund_info['line_items'] = [refund_info['line_items']]
+
+        if 'amount_in_cents' in refund_info:
+            return self._refund_amount(invoice, int(refund_info['amount_in_cents']))
+        else:
+            # Hack to get around the singleton hydration of XML
+            if isinstance(refund_info['line_items'], dict):
+                refund_info['line_items'] = [refund_info['line_items']]
+            return self._refund_line_items(invoice, refund_info)
+
+    def _refund_amount(self, invoice, amount_in_cents):
+        """Refunds a specific amount for the invoice."""
+
+        # Create a new transaction that tracks the refund
+        refund_transaction_info = {
+            'account': accounts_endpoint.backend.get_object(invoice['account']),
+            'amount_in_cents': -amount_in_cents,
+            'currency': 'USD',
+            'description': 'Refund for Invoice #{}'.format(invoice['invoice_number'])
+        }
+        new_transaction = transactions_endpoint.create(refund_transaction_info, format=BaseRecurlyEndpoint.RAW)
+
+        # Update transaction to mimic refund transaction
+        TransactionsEndpoint.backend.update_object(new_transaction['uuid'], {
+            'action': 'refund',
+            'refundable': False
+        })
+
+        # Update adjustments to mimic refund invoice
+        new_transaction = TransactionsEndpoint.backend.get_object(new_transaction['uuid'])
+        new_invoice = InvoicesEndpoint.backend.get_object(new_transaction['invoice'])
+        adjustments = new_invoice['line_items']
+        new_adjustments = []
+        for adjustment in adjustments:
+            new_adjustments.append(AdjustmentsEndpoint.backend.update_object(adjustment['uuid'], {'quantity': -adjustment['quantity']}))
+        new_invoice = InvoicesEndpoint.backend.update_object(new_invoice['invoice_number'], {'line_items': new_adjustments})
+
+        return self.serialize(new_invoice)
+
+    def _refund_line_items(self, invoice, refund_info):
+        """Refund individual line items on the invoice."""
 
         # New invoice tracking refund
         new_invoice = {'account': invoice['account'],

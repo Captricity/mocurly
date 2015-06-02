@@ -254,7 +254,7 @@ class TestTransaction(unittest.TestCase):
                 original_transaction = transaction
             else:
                 refund_transaction = transaction
-        self.assertEqual(refund_transaction['action'], 'purchase')
+        self.assertEqual(original_transaction['action'], 'purchase')
         self.assertEqual(original_transaction['refundable'], True)
         self.assertEqual(original_transaction['voidable'], True)
         self.assertEqual(original_transaction['amount_in_cents'], self.base_transaction_data['amount_in_cents'])
@@ -265,9 +265,11 @@ class TestTransaction(unittest.TestCase):
 
         for invoice_number, invoice in mocurly.backend.invoices_backend.datastore.items():
             self.assertEqual(len(invoice['transactions']), 1)
-            self.assertEqual(invoice['transactions'][0], '1234')
             if invoice_number != '1234':
+                self.assertNotEqual(invoice['transactions'][0], '1234')
                 refund_invoice = invoice
+            else:
+                self.assertEqual(invoice['transactions'][0], '1234')
         self.assertEqual(refund_invoice['total_in_cents'], -1)
 
         for adjustment_uuid, adjustment in mocurly.backend.adjustments_backend.datastore.items():
