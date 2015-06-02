@@ -56,7 +56,23 @@ class TestTransaction(unittest.TestCase):
                 'tax_rate': 0,
                 'tax_in_cents': 0,
                 'total_in_cents': self.base_transaction_data['amount_in_cents'],
-                'transactions': ['1234']
+                'transactions': ['1234'],
+                'line_items': ['abcd1234']
+            }
+
+        self.base_line_item = {
+                'uuid': 'abcd1234',
+                'type': 'charge',
+                'created_at': '2014-08-11',
+                'account_code': self.base_account_data['uuid'],
+                'currency': self.base_transaction_data['currency'],
+                'unit_amount_in_cents': self.base_transaction_data['amount_in_cents'],
+                'tax_in_cents': 0,
+                'discount_in_cents': 0,
+                'total_in_cents': self.base_transaction_data['amount_in_cents'],
+                'description': 'Foozle is the Barzam',
+                'quantity': 1,
+                'invoice': self.base_invoice_data['invoice_number']
             }
 
 
@@ -145,6 +161,65 @@ class TestTransaction(unittest.TestCase):
         transaction = recurly.Transaction.get('1234')
         with self.assertRaises(recurly.NotFoundError):
             transaction.refund()
+
+    def test_transaction_void_via_invoice(self):
+        """Uses the invoice refund system to void a transaction
+        """
+        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 0)
+
+        self.base_transaction_data['uuid'] = '1234'
+        self.base_transaction_data['account'] = self.base_account_data['uuid']
+        self.base_transaction_data['invoice'] = self.base_invoice_data['invoice_number']
+        self.base_transaction_data['test'] = True
+        self.base_transaction_data['voidable'] = True
+        self.base_transaction_data['refundable'] = True
+        self.base_transaction_data['tax_in_cents'] = 0
+        self.base_transaction_data['action'] = 'purchase'
+        self.base_transaction_data['status'] = 'success'
+        self.base_transaction_data['created_at'] = '2014-08-11'
+        mocurly.backend.transactions_backend.add_object('1234', self.base_transaction_data)
+        mocurly.backend.invoices_backend.add_object('1234', self.base_invoice_data)
+        mocurly.backend.adjustments_backend.add_object('abcd1234', self.base_line_item)
+
+        transaction = recurly.Transaction.get('1234')
+        invoice = transaction.invoice()
+        line_items = invoice.line_items
+        adjustments_to_refund = []
+        for line_item in line_items:
+            adjustments_to_refund.append({
+                'adjustment': line_item,
+                'quantity': line_item.quantity,
+                'prorate': False 
+            })
+        invoice.refund(adjustments_to_refund)
+
+        # Verify behavior of invoice line item refund
+        # - Creates a new invoice with adjustments that cancel out original invoice
+        # - Updates associated transaction object to be VOID
+        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
+        self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 2)
+        self.assertEqual(len(mocurly.backend.adjustments_backend.datastore), 2)
+
+        for invoice_number, invoice in mocurly.backend.invoices_backend.datastore.items():
+            self.assertEqual(len(invoice['transactions']), 1)
+            self.assertEqual(invoice['transactions'][0], '1234')
+            if invoice_number == '1234':
+                original_invoice = invoice
+            else:
+                refund_invoice = invoice
+        self.assertEqual(original_invoice['total_in_cents'], -refund_invoice['total_in_cents'])
+
+        for adjustment_uuid, adjustment in mocurly.backend.adjustments_backend.datastore.items():
+            if adjustment['invoice'] == '1234':
+                original_adjustment = adjustment
+            else:
+                refund_adjustment = adjustment
+        self.assertEqual(original_adjustment['total_in_cents'], -refund_adjustment['total_in_cents'])
+
+        transaction = recurly.Transaction.get('1234')
+        self.assertEqual(transaction.status, 'void')
+        self.assertEqual(transaction.voidable, False)
+        self.assertEqual(transaction.refundable, False)
 
     def test_transaction_list(self):
         self.base_transaction_data['uuid'] = '1234'
