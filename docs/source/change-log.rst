@@ -4,6 +4,12 @@
 Change log
 ==========
 
+0.2
+-----
+
+- Deprecate transaction refund
+- Implement invoice refund (by line item, and by amount)
+
 0.1.3
 -----
 
