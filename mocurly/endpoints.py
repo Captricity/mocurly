@@ -555,6 +555,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
                     'account': invoice['account'],
                     'currency': new_invoice['currency'],
                     'amount_in_cents': int(new_invoice['total_in_cents']),
+                    'invoice': new_invoice[InvoicesEndpoint.pk_attr],
 
                     # unsupported
                     'tax_in_cents': 0
