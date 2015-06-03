@@ -471,10 +471,13 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
         new_transaction = transactions_endpoint.create(refund_transaction_info, format=BaseRecurlyEndpoint.RAW)
 
         # Update transaction to mimic refund transaction
-        TransactionsEndpoint.backend.update_object(new_transaction['uuid'], {
+        opts = {
             'action': 'refund',
-            'refundable': False
-        })
+            'refundable': False,
+        }
+        if 'subscription' in invoice:
+            opts['subscription'] = invoice['subscription']
+        TransactionsEndpoint.backend.update_object(new_transaction['uuid'], opts)
 
         # Update adjustments to mimic refund invoice
         new_transaction = TransactionsEndpoint.backend.get_object(new_transaction['uuid'])
@@ -529,16 +532,35 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
             refund_line_items.append(charge_refund_line_item)
         new_invoice = InvoicesEndpoint.backend.update_object(new_invoice_id, {'line_items': refund_line_items})
 
+        transactions = map(lambda t_pk: TransactionsEndpoint.backend.get_object(t_pk), invoice['transactions'])
         # Update state of any associated objects
         #   If invoice is with transaction, then void/refund the transaction
-        transactions = invoice['transactions']
         for transaction in transactions:
-            TransactionsEndpoint.backend.update_object(transaction, {'status': 'void',
-                                                                     'voidable': False,
-                                                                     'refundable': False # TODO: only for full refunds
-                                                                    })
-        #   If invoice is with subscription, then update subscription state
-        # TODO
+            if transaction['voidable']:
+                TransactionsEndpoint.backend.update_object(transaction['uuid'], {
+                    'status': 'void',
+                    'voidable': False,
+                    'refundable': False  # TODO: only for full refunds
+                })
+            else:
+                new_transaction = {
+                    'uuid': transactions_endpoint.generate_id(),
+                    'action': 'refund',
+                    'status': 'success',
+                    'test': True,
+                    'voidable': True,
+                    'refundable': False,
+                    'created_at': current_time().isoformat(),
+                    'type': 'credit_card',
+                    'account': invoice['account'],
+                    'currency': new_invoice['currency'],
+                    'amount_in_cents': int(new_invoice['total_in_cents']),
+
+                    # unsupported
+                    'tax_in_cents': 0
+                }
+                TransactionsEndpoint.backend.add_object(new_transaction['uuid'], new_transaction)
+
 
         return self.serialize(new_invoice)
 
