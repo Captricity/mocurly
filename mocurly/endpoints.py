@@ -433,6 +433,10 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
         uri_out['account_uri'] = accounts_endpoint.get_object_uri(obj['account'])
         if 'subscription' in obj:
             uri_out['subscription_uri'] = subscriptions_endpoint.get_object_uri({'uuid': obj['subscription']})
+        if 'original_invoice' in obj:
+            faux_inv = {}
+            faux_inv[InvoicesEndpoint.pk_attr] = obj['original_invoice']
+            uri_out['original_invoice_uri'] = self.get_object_uri(faux_inv)
         return uri_out
 
     @details_route('POST', 'refund')
@@ -486,7 +490,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
         new_adjustments = []
         for adjustment in adjustments:
             new_adjustments.append(AdjustmentsEndpoint.backend.update_object(adjustment['uuid'], {'quantity': -adjustment['quantity']}))
-        new_invoice = InvoicesEndpoint.backend.update_object(new_invoice['invoice_number'], {'line_items': new_adjustments})
+        new_invoice = InvoicesEndpoint.backend.update_object(new_invoice['invoice_number'], {'line_items': new_adjustments, 'original_invoice': invoice[InvoicesEndpoint.pk_attr]})
 
         return self.serialize(new_invoice)
 
@@ -504,6 +508,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
                        'net_terms': 0,
                        'collection_method': 'automatic',
                        'transactions': invoice['transactions'],
+                       'original_invoice': invoice[InvoicesEndpoint.pk_attr],
 
                        # unsupported
                        'tax_type': 'usst',

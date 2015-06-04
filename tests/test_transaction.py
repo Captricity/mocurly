@@ -189,7 +189,7 @@ class TestTransaction(unittest.TestCase):
                 'quantity': line_item.quantity,
                 'prorate': False 
             })
-        invoice.refund(adjustments_to_refund)
+        new_invoice = invoice.refund(adjustments_to_refund)
 
         # Verify behavior of invoice line item refund
         # - Creates a new invoice with adjustments that cancel out original invoice
@@ -219,6 +219,8 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(transaction.status, 'void')
         self.assertEqual(transaction.voidable, False)
         self.assertEqual(transaction.refundable, False)
+
+        self.assertEqual(new_invoice.original_invoice().invoice_number, 1234)
 
     def test_transaction_refund_amount_via_invoice(self):
         """Uses the invoice refund system to void a transaction."""

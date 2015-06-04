@@ -3,6 +3,9 @@
     {% if invoice.uris.subscription_uri %}
         <subscription href="{{ invoice.uris.subscription_uri }}"/>
     {% endif %}
+    {% if invoice.uris.original_invoice_uri %}
+        <original_invoice href="{{ invoice.uris.original_invoice_uri }}"/>
+    {% endif %}
     <uuid>{{ invoice.uuid }}</uuid>
     <state>{{ invoice.state }}</state>
     <invoice_number type="integer">{{ invoice.invoice_number }}</invoice_number>
