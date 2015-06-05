@@ -507,7 +507,6 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
                        'created_at': current_time().isoformat(),
                        'net_terms': 0,
                        'collection_method': 'automatic',
-                       'transactions': invoice['transactions'],
                        'original_invoice': invoice[InvoicesEndpoint.pk_attr],
 
                        # unsupported
@@ -540,6 +539,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
         transactions = map(lambda t_pk: TransactionsEndpoint.backend.get_object(t_pk), invoice['transactions'])
         # Update state of any associated objects
         #   If invoice is with transaction, then void/refund the transaction
+        transactions_to_add = []
         for transaction in transactions:
             if transaction['voidable']:
                 TransactionsEndpoint.backend.update_object(transaction['uuid'], {
@@ -547,6 +547,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
                     'voidable': False,
                     'refundable': False  # TODO: only for full refunds
                 })
+                transactions_to_add.append(transaction['uuid'])
             else:
                 new_transaction = {
                     'uuid': transactions_endpoint.generate_id(),
@@ -566,7 +567,9 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
                     'tax_in_cents': 0
                 }
                 TransactionsEndpoint.backend.add_object(new_transaction['uuid'], new_transaction)
+                transactions_to_add.append(new_transaction['uuid'])
 
+        new_invoice = InvoicesEndpoint.backend.update_object(new_invoice_id, {'transactions': transactions_to_add})
 
         return self.serialize(new_invoice)
 
