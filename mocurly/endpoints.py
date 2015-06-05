@@ -568,6 +568,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
                 }
                 TransactionsEndpoint.backend.add_object(new_transaction['uuid'], new_transaction)
                 transactions_to_add.append(new_transaction['uuid'])
+                TransactionsEndpoint.backend.update_object(transaction['uuid'], {'refundable': False})
 
         new_invoice = InvoicesEndpoint.backend.update_object(new_invoice_id, {'transactions': transactions_to_add})
 
