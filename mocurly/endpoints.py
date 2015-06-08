@@ -910,7 +910,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
                 now = end
             days_left = (end - now).days
             total_days = (end - start).days
-            refund_amount = int((days_left / total_days) * transaction['amount_in_cents'])
+            refund_amount = int((float(days_left) / total_days) * transaction['amount_in_cents'])
             invoice_number = transaction['invoice']
             invoices_endpoint.refund_invoice(invoice_number, {'amount_in_cents': refund_amount})
         elif refund_type == 'full':

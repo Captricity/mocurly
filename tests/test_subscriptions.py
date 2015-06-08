@@ -233,6 +233,56 @@ class TestSubscriptions(unittest.TestCase):
         self.assertEqual(len(transactions), 1)
         self.assertEqual(transactions[0].status, 'void')
 
+    def test_subscription_termination_partial_refund(self):
+        # add a sample plan to the plans backend
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+        # add an active subscription
+        new_subscription = recurly.Subscription(**self.base_subscription_data)
+        new_subscription.save()
+        self.assertEqual(new_subscription.state, 'active')
+
+        # modify start time so a partial refund will refund half the cost
+        start = new_subscription.current_period_started_at
+        end = new_subscription.current_period_ends_at
+        new_start = start - (end-start)
+        mocurly.backend.subscriptions_backend.update_object(new_subscription.uuid, {'current_period_started_at': new_start.isoformat()})
+
+        # get the original transaction and invoice objects for use later
+        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
+        self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 1)
+        original_transaction_id = mocurly.backend.transactions_backend.datastore.keys()[0]
+        original_invoice_id = mocurly.backend.invoices_backend.datastore.keys()[0]
+
+        # Now terminate it with a partial refund
+        new_subscription.terminate(refund='partial')
+        
+        self.assertEqual(new_subscription.state, 'expired')
+        self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 2)
+        self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 2)
+        for invoice_id, invoice in mocurly.backend.invoices_backend.datastore.items():
+            if invoice_id == original_invoice_id:
+                original_invoice = invoice
+            else:
+                refund_invoice = invoice
+        # The following two lines reference the objects to make sure they exist
+        original_invoice
+        refund_invoice
+
+        original_transaction_ids = original_invoice['transactions']
+        self.assertEqual(len(original_transaction_ids), 1)
+        self.assertEqual(original_transaction_ids[0], original_transaction_id)
+        original_transaction = mocurly.backend.transactions_backend.get_object(original_transaction_id)
+        self.assertEqual(original_transaction['status'], 'success')  # not voided
+
+        refund_transaction_ids = refund_invoice['transactions']
+        self.assertEqual(len(refund_transaction_ids), 1)
+        self.assertNotEqual(refund_transaction_ids[0], original_transaction_id)
+        refund_transaction = mocurly.backend.transactions_backend.get_object(refund_transaction_ids[0])
+        self.assertEqual(refund_transaction['status'], 'success')
+        self.assertEqual(refund_transaction['action'], 'refund')
+        # 29 / 60, because today doesn't count
+        self.assertEqual(refund_transaction['amount_in_cents'], -int(original_transaction['amount_in_cents'] * (29.0 / 60)))
+
     def test_subscription_cancel(self):
         # add a sample plan to the plans backend
         mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
