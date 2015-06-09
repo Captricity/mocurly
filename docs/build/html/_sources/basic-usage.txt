@@ -15,7 +15,7 @@ In the following example, the call to the :meth:`~recurly.Account.save` method o
   >>> with mocurly():
   >>>     recurly.Account(account_code='foo').save()
 
-Note that you still have to set the `API_KEY` and `SUBDOMAIN` on the Recurly instance, since the Recurly client itself has assertions to make sure they are set. However, the values you use do not matter. They also can be set outside the Mocurly context, as in the example.
+Note that you still have to set the `API_KEY` and `SUBDOMAIN` on the Recurly instance, since the Recurly client itself has assertions to make sure they are set. However, the values you use do not matter. They also have to be set outside the Mocurly context, as in the example.
 
 Mocurly can be used as a decorator, context manager, or manually. In all 3 cases, the Mocurly context is reset at the start of the invocation.
 

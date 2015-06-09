@@ -127,3 +127,9 @@ class TestCore(unittest.TestCase):
 
         mocurly_.stop()
 
+    def test_exceptions(self):
+        """Tests that exception objects do the right thing."""
+        error_object = mocurly.ResponseError(200, 'Body')
+        self.assertEqual(error_object.status_code, 200)
+        self.assertEqual(error_object.response_body, 'Body')
+        self.assertEqual(str(error_object), '200')
