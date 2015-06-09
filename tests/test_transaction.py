@@ -287,7 +287,7 @@ class TestTransaction(unittest.TestCase):
         line_item_id = 'abcd1234'
         mocurly.backend.transactions_backend.update_object(transaction_id, {'invoice': self.base_invoice_data['invoice_number']})
         mocurly.backend.invoices_backend.add_object(self.base_invoice_data['invoice_number'], self.base_invoice_data)
-        mocurly.backend.adjustments_backend.add_object('abcd1234', self.base_line_item)
+        mocurly.backend.adjustments_backend.add_object(line_item_id, self.base_line_item)
         return transaction_id, invoice_number, line_item_id
  
     def _refund_transaction_by_line_items(self, transaction_id):
