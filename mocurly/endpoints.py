@@ -146,9 +146,6 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
             billing_info['account'] = create_info['account_code']
             billing_info_backend.add_object(create_info[AccountsEndpoint.pk_attr], billing_info)
             del create_info['billing_info']
-        else:
-            account = create_info[AccountsEndpoint.pk_attr]
-            billing_info_backend.add_object(account, {'account': account})
         create_info['hosted_login_token'] = self.generate_id()
         create_info['created_at'] = current_time().isoformat()
         return super(AccountsEndpoint, self).create(create_info, format=format)
