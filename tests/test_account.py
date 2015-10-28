@@ -110,6 +110,24 @@ class TestAccount(unittest.TestCase):
             else:
                 self.assertEqual(getattr(account, k), v)
 
+    def test_simple_account_update_billing_info(self):
+        # Create a simple account
+        recurly.Account(**self.base_account_data).save()
+
+        # Verify account has no billing info
+        recurly_account = recurly.Account.get(self.base_account_data['account_code'])
+        self.assertRaises(AttributeError, lambda: recurly_account.billing_info)
+
+        # Update the billing info using the update_billing_info method
+        billing_info = recurly.BillingInfo(**self.base_billing_info_data)
+        recurly_account.update_billing_info(billing_info)
+
+        # Verify billing info object exists in backend
+        self.assertTrue(mocurly.backend.billing_info_backend.has_object(self.base_account_data['account_code']))
+        new_billing_info = mocurly.backend.billing_info_backend.get_object(self.base_account_data['account_code'])
+        for k, v in self.base_billing_info_data.items():
+            self.assertEqual(new_billing_info[k], v)
+
     def test_delete_billing_info(self):
         self.base_account_data['hosted_login_token'] = 'abcd1234'
         self.base_account_data['created_at'] = '2014-08-11'
