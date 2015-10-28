@@ -28,6 +28,15 @@ class TestCore(unittest.TestCase):
             self.assertTrue(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
         foo()
 
+    def test_decorate_class_method(self):
+        class Demo(object):
+            @mocurly.mocurly
+            def foo(this):
+                self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
+                recurly.Account(**self.base_account_data).save()
+                self.assertTrue(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
+        Demo().foo()
+
     def test_context_manager(self):
         with mocurly.mocurly():
             self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
