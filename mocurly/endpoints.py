@@ -193,7 +193,11 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
 
     @details_route('PUT', 'billing_info')
     def update_billing_info(self, pk, update_info, format=BaseRecurlyEndpoint.XML):
-        out = billing_info_backend.update_object(pk, update_info)
+        if billing_info_backend.has_object(pk):
+            out = billing_info_backend.update_object(pk, update_info)
+        else:
+            update_info['account'] = self.pk_attr
+            out = billing_info_backend.add_object(pk, update_info)
         return self.serialize_billing_info(out, format=format)
 
     @details_route('DELETE', 'billing_info')
