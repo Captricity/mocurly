@@ -8,6 +8,7 @@ setup(
     package_data={'mocurly': ['templates/*.xml']},
     version='0.2.1',
     description='A library that allows your python tests to easily mock out the recurly library',
+    long_description=open('README.rst').read(),
     author='Yoriyasu Yano',
     author_email='yoriy@captricity.com',
     url='https://github.com/Captricity/mocurly',
