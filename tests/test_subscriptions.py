@@ -2,6 +2,8 @@ import unittest
 import datetime
 import iso8601
 import recurly
+from recurly.errors import BadRequestError
+
 recurly.API_KEY = 'blah'
 
 import mocurly.core
@@ -290,6 +292,10 @@ class TestSubscriptions(unittest.TestCase):
         new_subscription = recurly.Subscription(**self.base_subscription_data)
         new_subscription.save()
         self.assertEqual(new_subscription.state, 'active')
+
+        # trying to reactivate an active subscription should fail
+        with self.assertRaises(BadRequestError):
+           new_subscription.reactivate()
 
         # now cancel it and verify it was canceled
         new_subscription.cancel()

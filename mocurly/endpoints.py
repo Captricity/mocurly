@@ -971,6 +971,8 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     @details_route('PUT', 'reactivate')
     def reactivate_subscription(self, pk, reactivate_info, format=format):
         subscription = SubscriptionsEndpoint.backend.get_object(pk)
+        if not subscription['state'] == 'canceled':
+            raise ResponseError(400, '')
         return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
             'state': 'active',
             'expires_at': None,
