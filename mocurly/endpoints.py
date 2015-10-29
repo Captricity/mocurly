@@ -791,6 +791,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             uri_out['invoice_uri'] = invoices_endpoint.get_object_uri(pseudo_invoice_object)
         uri_out['plan_uri'] = plans_endpoint.get_object_uri(obj['plan'])
         uri_out['cancel_uri'] = uri_out['object_uri'] + '/cancel'
+        uri_out['reactivate_uri'] = uri_out['object_uri'] + '/reactivate'
         uri_out['terminate_uri'] = uri_out['object_uri'] + '/terminate'
         return uri_out
 
@@ -965,6 +966,15 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             'state': 'canceled',
             'expires_at': subscription['current_period_ends_at'],
             'canceled_at': current_time().isoformat()
+        }), format=format)
+
+    @details_route('PUT', 'reactivate')
+    def reactivate_subscription(self, pk, reactivate_info, format=format):
+        subscription = SubscriptionsEndpoint.backend.get_object(pk)
+        return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
+            'state': 'active',
+            'expires_at': None,
+            'canceled_at': None
         }), format=format)
 
 accounts_endpoint = AccountsEndpoint()
