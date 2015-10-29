@@ -2,6 +2,8 @@ import unittest
 import datetime
 import iso8601
 import recurly
+from recurly.errors import BadRequestError
+
 recurly.API_KEY = 'blah'
 
 import mocurly.core
@@ -283,7 +285,7 @@ class TestSubscriptions(unittest.TestCase):
         # 29 / 60, because today doesn't count
         self.assertEqual(refund_transaction['amount_in_cents'], -int(original_transaction['amount_in_cents'] * (29.0 / 60)))
 
-    def test_subscription_cancel(self):
+    def test_subscription_cancel_reactivate(self):
         # add a sample plan to the plans backend
         mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
         # add an active subscription
@@ -291,9 +293,19 @@ class TestSubscriptions(unittest.TestCase):
         new_subscription.save()
         self.assertEqual(new_subscription.state, 'active')
 
+        # trying to reactivate an active subscription should fail
+        with self.assertRaises(BadRequestError):
+           new_subscription.reactivate()
+
         # now cancel it and verify it was canceled
         new_subscription.cancel()
         self.assertEqual(new_subscription.state, 'canceled')
+
+        # now reactivate it and verify it was reactivated
+        new_subscription.reactivate()
+        self.assertEqual(new_subscription.state, 'active')
+        self.assertEqual(new_subscription.canceled_at, None)
+        self.assertEqual(new_subscription.expires_at, None)
 
     def test_coupon_redemption_percent_discount(self):
         # add a sample plan to the plans backend

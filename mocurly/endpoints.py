@@ -190,7 +190,11 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
 
     @details_route('PUT', 'billing_info')
     def update_billing_info(self, pk, update_info, format=BaseRecurlyEndpoint.XML):
-        out = billing_info_backend.update_object(pk, update_info)
+        if billing_info_backend.has_object(pk):
+            out = billing_info_backend.update_object(pk, update_info)
+        else:
+            update_info['account'] = self.pk_attr
+            out = billing_info_backend.add_object(pk, update_info)
         return self.serialize_billing_info(out, format=format)
 
     @details_route('DELETE', 'billing_info')
@@ -787,6 +791,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             uri_out['invoice_uri'] = invoices_endpoint.get_object_uri(pseudo_invoice_object)
         uri_out['plan_uri'] = plans_endpoint.get_object_uri(obj['plan'])
         uri_out['cancel_uri'] = uri_out['object_uri'] + '/cancel'
+        uri_out['reactivate_uri'] = uri_out['object_uri'] + '/reactivate'
         uri_out['terminate_uri'] = uri_out['object_uri'] + '/terminate'
         return uri_out
 
@@ -961,6 +966,17 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
             'state': 'canceled',
             'expires_at': subscription['current_period_ends_at'],
             'canceled_at': current_time().isoformat()
+        }), format=format)
+
+    @details_route('PUT', 'reactivate')
+    def reactivate_subscription(self, pk, reactivate_info, format=format):
+        subscription = SubscriptionsEndpoint.backend.get_object(pk)
+        if not subscription['state'] == 'canceled':
+            raise ResponseError(400, '')
+        return self.serialize(SubscriptionsEndpoint.backend.update_object(pk, {
+            'state': 'active',
+            'expires_at': None,
+            'canceled_at': None
         }), format=format)
 
 accounts_endpoint = AccountsEndpoint()

@@ -55,5 +55,6 @@
         {% endfor %}
     </subscription_add_ons>
     <a name="cancel" href="{{ subscription.uris.cancel_uri }}" method="put"/>
+    <a name="reactivate" href="{{ subscription.uris.reactivate_uri }}" method="put"/>
     <a name="terminate" href="{{ subscription.uris.terminate_uri }}" method="put"/>
 </subscription>
