@@ -4,6 +4,13 @@
 Change log
 ==========
 
+0.2.1
+-----
+
+- Ability to decorate instance methods
+- Implement subscription reactivation protocol
+- Bugfix: Allow updating account billing info for accounts without billing info originally
+
 0.2
 -----
 
