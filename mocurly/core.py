@@ -44,6 +44,11 @@ class mocurly(object):
     def __exit__(self, type, value, tb):
         self.stop()
 
+    def __get__(self, obj, objtype):
+        """Support instance methods."""
+        import functools
+        return functools.partial(self.__call__, obj)
+
     def start(self):
         """Starts the mocked context by enabling HTTPretty to route requests to
         the defined endpoints.
