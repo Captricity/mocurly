@@ -847,7 +847,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
 
         # Subscription states
         if 'trial_started_at' in create_info:
-            create_info['state'] = 'trial'
+            create_info['state'] = 'in_trial'
         elif 'current_period_ends_at' not in create_info:
             create_info['state'] = 'future'
         else:
@@ -868,6 +868,21 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
 
         new_sub = super(SubscriptionsEndpoint, self).create(defaults, format=BaseRecurlyEndpoint.RAW)
         self.hydrate_foreign_keys(new_sub)
+
+        if defaults['state'] == 'in_trial':
+            # create a transaction for the trial
+            new_transaction = {}
+            new_transaction['account'] = {}
+            new_transaction['account'][AccountsEndpoint.pk_attr] = new_sub['account']
+            new_transaction['amount_in_cents'] = 0
+            new_transaction['currency'] = new_sub['currency']
+            new_transaction['subscription'] = new_sub[SubscriptionsEndpoint.pk_attr]
+            new_transaction = transactions_endpoint.create(new_transaction, format=BaseRecurlyEndpoint.RAW)
+            new_invoice_id = new_transaction['invoice']
+
+            InvoicesEndpoint.backend.update_object(new_invoice_id, {'subscription': new_sub[SubscriptionsEndpoint.pk_attr]})
+
+            new_sub = SubscriptionsEndpoint.backend.update_object(defaults['uuid'], {'invoice': new_invoice_id})
 
         if defaults['state'] == 'active':
             # Setup charges first, to calculate total charge to put on the
