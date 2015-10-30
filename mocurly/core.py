@@ -6,6 +6,7 @@ context.
 import recurly
 import re
 import ssl
+import functools
 from six.moves.urllib.parse import urlparse, parse_qs
 from httpretty import HTTPretty
 
@@ -46,7 +47,6 @@ class mocurly(object):
 
     def __get__(self, obj, objtype):
         """Support instance methods."""
-        import functools
         return functools.partial(self.__call__, obj)
 
     def start(self):
