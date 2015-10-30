@@ -192,7 +192,7 @@ class TestSubscriptions(unittest.TestCase):
         account_subscriptions = account.subscriptions()
         self.assertEqual(len(account_subscriptions), 1)
         self.assertEqual(account_subscriptions[0].uuid, new_subscription.uuid)
-        self.assertEqual(account_subscriptions[0].state, 'in_trial')
+        self.assertEqual(account_subscriptions[0].state, 'active')
 
     def test_subscriptions_with_addons(self):
         # add a sample plan to the plans backend
