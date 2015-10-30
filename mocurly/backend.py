@@ -61,7 +61,19 @@ class AccountBackend(BaseBackend):
 
 
 class BillingInfoBackend(BaseBackend):
-    pass
+    def add_object(self, uuid, obj):
+        if obj.get('number', None) is not None:
+            raw_number = obj['number'].replace('-', '')
+            obj['first_six'] = raw_number[:6]
+            obj['last_four'] = raw_number[-4:]
+        return super(BillingInfoBackend, self).add_object(uuid, obj)
+
+    def update_object(self, uuid, obj):
+        if obj.get('number', None) is not None:
+            raw_number = obj['number'].replace('-', '')
+            obj['first_six'] = raw_number[:6]
+            obj['last_four'] = raw_number[-4:]
+        return super(BillingInfoBackend, self).update_object(uuid, obj)
 
 
 class InvoiceBackend(BaseBackend):
