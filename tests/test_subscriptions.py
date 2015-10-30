@@ -169,6 +169,31 @@ class TestSubscriptions(unittest.TestCase):
         self.assertEqual(len(account_subscriptions), 1)
         self.assertEqual(account_subscriptions[0].uuid, new_subscription.uuid)
 
+    def test_trial_subscription_creation(self):
+        # add a sample plan to the plans backend
+        self.base_backed_plan_data['trial_interval_length'] = 1
+        mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
+
+        self.assertEqual(len(mocurly.backend.subscriptions_backend.datastore), 0)
+
+        new_subscription = recurly.Subscription(**self.base_subscription_data)
+        new_subscription.save()
+
+        self.assertEqual(len(mocurly.backend.subscriptions_backend.datastore), 1)
+
+        # Make sure a new transaction and invoice was created with it
+        invoice = new_subscription.invoice()
+        transactions = invoice.transactions
+        self.assertEqual(len(transactions), 1)
+        self.assertEqual(transactions[0].subscription().uuid, new_subscription.uuid)
+
+        # Make sure we can reference the subscription from the account
+        account = new_subscription.account()
+        account_subscriptions = account.subscriptions()
+        self.assertEqual(len(account_subscriptions), 1)
+        self.assertEqual(account_subscriptions[0].uuid, new_subscription.uuid)
+        self.assertEqual(account_subscriptions[0].state, 'in_trial')
+
     def test_subscriptions_with_addons(self):
         # add a sample plan to the plans backend
         mocurly.backend.plans_backend.add_object(self.base_backed_plan_data['plan_code'], self.base_backed_plan_data)
