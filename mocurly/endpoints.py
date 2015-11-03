@@ -846,9 +846,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         create_info['tax_rate'] = 0
 
         # Subscription states
-        if 'trial_started_at' in create_info:
-            create_info['state'] = 'trial'
-        elif 'current_period_ends_at' not in create_info:
+        if 'current_period_ends_at' not in create_info:
             create_info['state'] = 'future'
         else:
             create_info['state'] = 'active'
@@ -870,60 +868,75 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         self.hydrate_foreign_keys(new_sub)
 
         if defaults['state'] == 'active':
-            # Setup charges first, to calculate total charge to put on the
-            # invoice and transaction
-            total = 0
-            adjustment_infos = []
-            plan_charge_line_item = {
-                'account_code': new_sub['account'],
-                'currency': new_sub['currency'],
-                'unit_amount_in_cents': int(new_sub['unit_amount_in_cents']),
-                'description': new_sub['plan']['name'],
-                'quantity': new_sub['quantity']
-            }
-            total += plan_charge_line_item['unit_amount_in_cents']
-            adjustment_infos.append(plan_charge_line_item)
+            if 'trial_started_at' in defaults:
+                # create a transaction and invoice for the trial
+                new_transaction = {}
+                new_transaction['account'] = {}
+                new_transaction['account'][AccountsEndpoint.pk_attr] = new_sub['account']
+                new_transaction['amount_in_cents'] = 0
+                new_transaction['currency'] = new_sub['currency']
+                new_transaction['subscription'] = new_sub[SubscriptionsEndpoint.pk_attr]
+                new_transaction = transactions_endpoint.create(new_transaction, format=BaseRecurlyEndpoint.RAW)
+                new_invoice_id = new_transaction['invoice']
 
-            if 'subscription_add_ons' in new_sub:
-                for add_on in new_sub['subscription_add_ons']:
-                    plan_charge_line_item = {
-                        'account_code': new_sub['account'],
-                        'currency': new_sub['currency'],
-                        'unit_amount_in_cents': int(add_on['unit_amount_in_cents']),
-                        'description': add_on['name'],
-                        'quantity': new_sub['quantity'],
-                    }
-                    total += plan_charge_line_item['unit_amount_in_cents']
-                    adjustment_infos.append(plan_charge_line_item)
+                InvoicesEndpoint.backend.update_object(new_invoice_id, {'subscription': new_sub[SubscriptionsEndpoint.pk_attr]})
 
-            # now calculate discounts
-            coupon_redemption = accounts_endpoint.get_coupon_redemption(new_sub['account'])
-            if coupon_redemption:
+                new_sub = SubscriptionsEndpoint.backend.update_object(defaults['uuid'], {'invoice': new_invoice_id})
+            else:
+                # Setup charges first, to calculate total charge to put on the
+                # invoice and transaction
+                total = 0
+                adjustment_infos = []
+                plan_charge_line_item = {
+                    'account_code': new_sub['account'],
+                    'currency': new_sub['currency'],
+                    'unit_amount_in_cents': int(new_sub['unit_amount_in_cents']),
+                    'description': new_sub['plan']['name'],
+                    'quantity': new_sub['quantity']
+                }
+                total += plan_charge_line_item['unit_amount_in_cents']
+                adjustment_infos.append(plan_charge_line_item)
+
+                if 'subscription_add_ons' in new_sub:
+                    for add_on in new_sub['subscription_add_ons']:
+                        plan_charge_line_item = {
+                            'account_code': new_sub['account'],
+                            'currency': new_sub['currency'],
+                            'unit_amount_in_cents': int(add_on['unit_amount_in_cents']),
+                            'description': add_on['name'],
+                            'quantity': new_sub['quantity'],
+                        }
+                        total += plan_charge_line_item['unit_amount_in_cents']
+                        adjustment_infos.append(plan_charge_line_item)
+
+                # now calculate discounts
+                coupon_redemption = accounts_endpoint.get_coupon_redemption(new_sub['account'])
+                if coupon_redemption:
+                    for plan_charge_line_item in adjustment_infos:
+                        discount = coupons_endpoint.determine_coupon_discount(coupon_redemption['coupon'], plan_charge_line_item['unit_amount_in_cents'])
+                        plan_charge_line_item['discount_in_cents'] = discount
+                        total -= plan_charge_line_item['discount_in_cents']
+
+                # create a transaction if the subscription is started
+                new_transaction = {}
+                new_transaction['account'] = {}
+                new_transaction['account'][AccountsEndpoint.pk_attr] = new_sub['account']
+                new_transaction['amount_in_cents'] = total
+                new_transaction['currency'] = new_sub['currency']
+                new_transaction['subscription'] = new_sub[SubscriptionsEndpoint.pk_attr]
+                new_transaction = transactions_endpoint.create(new_transaction, format=BaseRecurlyEndpoint.RAW)
+                new_invoice_id = new_transaction['invoice']
+
+                # Now create accumulated new adjustments for the sub to track line items
+                adjustments = []
                 for plan_charge_line_item in adjustment_infos:
-                    discount = coupons_endpoint.determine_coupon_discount(coupon_redemption['coupon'], plan_charge_line_item['unit_amount_in_cents'])
-                    plan_charge_line_item['discount_in_cents'] = discount
-                    total -= plan_charge_line_item['discount_in_cents']
+                    plan_charge_line_item['invoice'] = new_invoice_id
+                    plan_charge_line_item = adjustments_endpoint.create(plan_charge_line_item, format=BaseRecurlyEndpoint.RAW)
+                    adjustments.append(plan_charge_line_item[AdjustmentsEndpoint.pk_attr])
 
-            # create a transaction if the subscription is started
-            new_transaction = {}
-            new_transaction['account'] = {}
-            new_transaction['account'][AccountsEndpoint.pk_attr] = new_sub['account']
-            new_transaction['amount_in_cents'] = total
-            new_transaction['currency'] = new_sub['currency']
-            new_transaction['subscription'] = new_sub[SubscriptionsEndpoint.pk_attr]
-            new_transaction = transactions_endpoint.create(new_transaction, format=BaseRecurlyEndpoint.RAW)
-            new_invoice_id = new_transaction['invoice']
+                InvoicesEndpoint.backend.update_object(new_invoice_id, {'subscription': new_sub[SubscriptionsEndpoint.pk_attr], 'line_items': adjustments})
 
-            # Now create accumulated new adjustments for the sub to track line items
-            adjustments = []
-            for plan_charge_line_item in adjustment_infos:
-                plan_charge_line_item['invoice'] = new_invoice_id
-                plan_charge_line_item = adjustments_endpoint.create(plan_charge_line_item, format=BaseRecurlyEndpoint.RAW)
-                adjustments.append(plan_charge_line_item[AdjustmentsEndpoint.pk_attr])
-
-            InvoicesEndpoint.backend.update_object(new_invoice_id, {'subscription': new_sub[SubscriptionsEndpoint.pk_attr], 'line_items': adjustments})
-
-            new_sub = SubscriptionsEndpoint.backend.update_object(defaults['uuid'], {'invoice': new_invoice_id})
+                new_sub = SubscriptionsEndpoint.backend.update_object(defaults['uuid'], {'invoice': new_invoice_id})
         return self.serialize(new_sub, format=format)
 
     @details_route('PUT', 'terminate')
