@@ -2,12 +2,15 @@
 
 Each endpoint class will define the CRUD interface into the resource.
 """
+from datetime import datetime
+
 import recurly
 import six
 import random
 import string
 import dateutil.relativedelta
 import dateutil.parser
+from dateutil.tz import tzutc
 
 from .utils import current_time
 from .errors import TRANSACTION_ERRORS, ResponseError
@@ -868,7 +871,9 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
         self.hydrate_foreign_keys(new_sub)
 
         if defaults['state'] == 'active':
-            if 'trial_started_at' in defaults:
+            # if trial_ends_at is set but is not in the future, the trial has ended
+            if 'trial_started_at' in defaults and \
+                ('trial_ends_at' not in defaults or self._parse_isoformat(defaults['trial_ends_at']) >= datetime.now(tzutc())):
                 # create a transaction and invoice for the trial
                 new_transaction = {}
                 new_transaction['account'] = {}
