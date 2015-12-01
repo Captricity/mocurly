@@ -4,6 +4,12 @@
 Change log
 ==========
 
+0.2.2
+-----
+
+- Support for paypal in billing info
+- Create invoice for a trial that has ended
+
 0.2.1
 -----
 
