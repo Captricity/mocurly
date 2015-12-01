@@ -199,7 +199,7 @@ class TestAccount(unittest.TestCase):
                 continue # skip
             self.assertEqual(getattr(billing_info, k), v)
 
-    def test_update_billing_info(self):
+    def test_update_creditcard_billing_info(self):
         self.base_account_data['hosted_login_token'] = 'abcd1234'
         self.base_account_data['created_at'] = '2014-08-11'
         mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
@@ -226,6 +226,26 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(billing_info_backed['verification_value'], '123')
         self.assertEqual(billing_info_backed['month'], '11')
         self.assertEqual(billing_info_backed['year'], '2015')
+
+    def test_update_paypal_billing_info(self):
+        self.base_account_data['hosted_login_token'] = 'abcd1234'
+        self.base_account_data['created_at'] = '2014-08-11'
+        mocurly.backend.accounts_backend.add_object(self.base_account_data['account_code'], self.base_account_data)
+        self.base_billing_info_data['account'] = self.base_account_data['account_code']
+        mocurly.backend.billing_info_backend.add_object(self.base_account_data['account_code'], self.base_billing_info_data)
+
+        account = recurly.Account.get(self.base_account_data['account_code'])
+        billing_info = account.billing_info
+        billing_info.first_name = 'Verena'
+        billing_info.last_name = 'Example'
+        billing_info.paypal_billing_agreement_id = 'PP-7594'
+        billing_info.save()
+
+        self.assertEqual(len(mocurly.backend.billing_info_backend.datastore), 1)
+        billing_info_backed = mocurly.backend.billing_info_backend.get_object(self.base_account_data['account_code'])
+        self.assertEqual(billing_info_backed['first_name'], 'Verena')
+        self.assertEqual(billing_info_backed['last_name'], 'Example')
+        self.assertEqual(billing_info_backed['paypal_billing_agreement_id'], 'PP-7594')
 
     def test_update_account_with_billing_info(self):
         # Case 1: account exists, but has no billing data

@@ -90,4 +90,9 @@
     {% else %}
         <last_four nil="nil"></last_four>
     {% endif %}
+    {% if billing_info.paypal_billing_agreement_id %}
+        <paypal_billing_agreement_id>{{ billing_info.paypal_billing_agreement_id }}</paypal_billing_agreement_id>
+    {% else %}
+        <paypal_billing_agreement_id nil="nil"></paypal_billing_agreement_id>
+    {% endif %}
 </billing_info>
