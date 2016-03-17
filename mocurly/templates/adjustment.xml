@@ -22,7 +22,7 @@
     </tax_details>
     <start_date type="datetime">{{ adjustment.start_date }}</start_date>
     {% if adjustment.end_date %}
-        <end_date>{{ adjustment.end_date }}</end_date>
+        <end_date type="datetime">{{ adjustment.end_date }}</end_date>
     {% else %}
         <end_date nil="nil"></end_date>
     {% endif %}

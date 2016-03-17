@@ -358,6 +358,12 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
                                         'description': create_info['description'],
                                         'quantity': 1,
                                         'invoice': new_invoice_id}
+
+        if 'subscription' in create_info:
+            subscription = subscriptions_backend.get_object(create_info['subscription'])
+            transaction_charge_line_item['start_date'] = dateutil.parser.parse(subscription['current_period_started_at'])
+            transaction_charge_line_item['end_date'] = dateutil.parser.parse(subscription['current_period_ends_at'])
+
         transaction_charge_line_item = adjustments_endpoint.create(transaction_charge_line_item, format=BaseRecurlyEndpoint.RAW)
         InvoicesEndpoint.backend.update_object(new_invoice_id, {'line_items': [transaction_charge_line_item]})
 
@@ -395,7 +401,7 @@ class AdjustmentsEndpoint(BaseRecurlyEndpoint):
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
-        create_info['created_at'] = create_info['start_date'] = current_time().isoformat()
+        create_info['created_at'] = current_time().isoformat()
         if int(create_info['unit_amount_in_cents']) >= 0:
             create_info['type'] = 'charge'
         else:
@@ -897,7 +903,9 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
                     'currency': new_sub['currency'],
                     'unit_amount_in_cents': int(new_sub['unit_amount_in_cents']),
                     'description': new_sub['plan']['name'],
-                    'quantity': new_sub['quantity']
+                    'quantity': new_sub['quantity'],
+                    'start_date': self._parse_isoformat(new_sub['current_period_started_at']),
+                    'end_date': self._parse_isoformat(new_sub['current_period_ends_at'])
                 }
                 total += plan_charge_line_item['unit_amount_in_cents']
                 adjustment_infos.append(plan_charge_line_item)
