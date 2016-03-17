@@ -329,6 +329,8 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
             create_info['transaction_error'] = transaction_error
             transaction_xml = super(TransactionsEndpoint, self).create(create_info, format)
             error_xml = serialize('transaction_error.xml', 'transaction_error', transaction_error)
+            if create_info.get('subscription', False):
+                subscriptions_backend.delete_object(create_info['subscription'])
             raise ResponseError(422, '<errors>{0}{1}</errors>'.format(error_xml, transaction_xml))
 
         # Every new transaction creates a new invoice
