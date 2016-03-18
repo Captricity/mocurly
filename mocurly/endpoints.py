@@ -314,7 +314,7 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         create_info['voidable'] = True
         create_info['refundable'] = True
         create_info['created_at'] = current_time().isoformat()
-        create_info['type'] = 'credit_card'
+        create_info['payment_method'] = 'credit_card'
         if 'description' not in create_info:
             create_info['description'] = ''
 
