@@ -961,7 +961,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     def terminate_subscription(self, pk, terminate_info, format=format):
         subscription = SubscriptionsEndpoint.backend.get_object(pk)
         # assume base transaction exists
-        transaction = TransactionsEndpoint.backend.list_objects(lambda trans: trans['subscription'] == subscription[SubscriptionsEndpoint.pk_attr])[0]
+        transaction = TransactionsEndpoint.backend.list_objects(lambda trans: trans.get('subscription', None) == subscription[SubscriptionsEndpoint.pk_attr])[0]
         invoice_number = transaction['invoice']
         invoice = InvoicesEndpoint.backend.get_object(invoice_number)
         start = self._parse_isoformat(subscription['current_period_started_at'])
