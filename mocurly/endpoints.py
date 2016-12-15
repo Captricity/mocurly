@@ -297,6 +297,8 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
             pseudo_subscription_object = {}
             pseudo_subscription_object[SubscriptionsEndpoint.pk_attr] = obj['subscription']
             uri_out['subscription_uri'] = subscriptions_endpoint.get_object_uri(pseudo_subscription_object)
+        if 'original_transaction' in obj:
+            uri_out['original_transaction_uri'] = transactions_endpoint.get_object_uri(obj['original_transaction'])
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
@@ -493,6 +495,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
         opts = {
             'action': 'refund',
             'refundable': False,
+            'original_transaction': TransactionsEndpoint.backend.get_object(invoice['transactions'][0])
         }
         if 'subscription' in invoice:
             opts['subscription'] = invoice['subscription']

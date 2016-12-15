@@ -6,6 +6,9 @@
     {% if transaction.uris.subscription_uri %}
         <subscription href="{{ transaction.uris.subscription_uri }}"/>
     {% endif %}
+    {% if transaction.uris.original_transaction_uri %}
+        <original_transaction href="{{ transaction.uris.original_transaction_uri }}"/>
+    {% endif %}
     <uuid>{{ transaction.uuid }}</uuid>
     <action>{{ transaction.action }}</action>
     <amount_in_cents type="integer">{{ transaction.amount_in_cents }}</amount_in_cents>
