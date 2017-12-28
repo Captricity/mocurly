@@ -190,7 +190,9 @@ class mocurly(object):
                 uri_re = re.compile(uri)
 
                 def extra_route_callback(request, uri, headers, method=method, uri_re=uri_re):
-                    pk = uri_re.match(uri).group(1)
+                    matched = uri_re.match(uri)
+                    uri_args = list(matched.groups())
+
                     if method.method == 'DELETE':
                         status = 204
                     else:
@@ -199,13 +201,14 @@ class mocurly(object):
                         post_data = request.querystring.copy()
                         if request.body:
                             post_data.update(deserialize(request.body)[1])
-                        result = method(pk, post_data)
+                        uri_args.append(post_data)
+                        result = method(*uri_args)
                     elif method.is_list:
-                        result = method(pk, filters=request.querystring)
+                        result = method(*uri_args, filters=request.querystring)
                         headers['X-Records'] = result[1]
                         result = result[0]
                     else:
-                        result = method(pk)
+                        result = method(*uri_args)
                     return status, headers, result
                 if method.method == 'DELETE':
                     HTTPretty.register_uri(HTTPretty.DELETE, uri_re, body=_callback(self)(extra_route_callback))

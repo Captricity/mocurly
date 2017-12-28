@@ -138,7 +138,7 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         if billing_info_backend.has_object(obj[AccountsEndpoint.pk_attr]):
             uri_out['billing_info_uri'] = uri_out['object_uri'] + '/billing_info'
         uri_out['invoices_uri'] = uri_out['object_uri'] + '/invoices'
-        uri_out['redemption_uri'] = uri_out['object_uri'] + '/redemption'
+        uri_out['redemptions_uri'] = uri_out['object_uri'] + '/redemptions'
         uri_out['subscriptions_uri'] = uri_out['object_uri'] + '/subscriptions'
         uri_out['transactions_uri'] = uri_out['object_uri'] + '/transactions'
         return uri_out
@@ -228,31 +228,50 @@ class AccountsEndpoint(BaseRecurlyEndpoint):
         out = SubscriptionsEndpoint.backend.list_objects(filter_subscriptions)
         return subscriptions_endpoint.serialize(out, format=format)
 
+    @details_route('GET', 'redemptions', is_list=True)
+    def get_coupon_redemptions_list_view(self, account_code, filters=None, format=BaseRecurlyEndpoint.XML):
+        coupon_redemptions = self.get_coupon_redemptions_list(account_code)
+        return coupons_endpoint.serialize_coupon_redemption(coupon_redemptions, format=format)
+
+    @details_route('GET', 'redemptions/([^/ ]+)')
+    def get_coupon_redemption_view(self, account_code, uuid, format=BaseRecurlyEndpoint.XML):
+        coupon_redemptions = self.get_coupon_redemptions_list(account_code)
+        for coupon_redemption in coupon_redemptions:
+            coupon_redemption_uuid = \
+                coupons_endpoint.generate_coupon_redemption_uuid(
+                    coupon_redemption['coupon']['coupon_code'],
+                    account_code)
+            if coupon_redemption_uuid == uuid:
+                return coupons_endpoint.serialize_coupon_redemption(coupon_redemption, format=format)
+        raise ResponseError(404, '')
+
     @details_route('GET', 'redemption')
-    def get_coupon_redemption_view(self, account_code, format=BaseRecurlyEndpoint.XML):
-        coupon_redemption = self.get_coupon_redemption(account_code)
-        if coupon_redemption is None:
-            raise ResponseError(404, '')
-        return coupons_endpoint.serialize_coupon_redemption(coupon_redemption, format=format)
+    def get_latest_coupon_redemption(self, account_code, format=BaseRecurlyEndpoint.XML):
+        coupon_redemptions = self.get_coupon_redemptions_list(account_code)
+        # TODO sort by time and return latest
+        return coupons_endpoint.serialize_coupon_redemption(coupon_redemptions[0], format=format)
 
-    def get_coupon_redemption(self, account_code):
+    def get_coupon_redemptions_list(self, account_code):
         account_coupon_redemptions = coupon_redemptions_backend.list_objects(lambda redemption: redemption['account_code'] == account_code)
-        if len(account_coupon_redemptions) == 0:
-            return None
-
-        assert len(account_coupon_redemptions) == 1
-        coupon_redemption = account_coupon_redemptions[0]
-        return coupons_endpoint.hydrate_coupon_redemption_foreign_keys(coupon_redemption)
+        return [coupons_endpoint.hydrate_coupon_redemption_foreign_keys(coupon_redemption)
+                for coupon_redemption in account_coupon_redemptions]
 
     @details_route('DELETE', 'redemption')
-    def delete_coupon_redemption(self, account_code, format=BaseRecurlyEndpoint.XML):
-        coupon_redemption = self.get_coupon_redemption(account_code)
-        if coupon_redemption is None:
+    def delete_latest_coupon_redemption(self, account_code, format=BaseRecurlyEndpoint.XML):
+        try:
+            coupon_redemptions = self.get_coupon_redemptions_list(account_code)
+            coupon_redemptions_backend.delete_object(coupon_redemptions[0]['uuid'])
+            return ''
+        except KeyError:
             raise ResponseError(404, '')
 
-        coupon_redemption_uuid = coupons_endpoint.generate_coupon_redemption_uuid(coupon_redemption['coupon']['coupon_code'], account_code)
-        coupon_redemptions_backend.delete_object(coupon_redemption_uuid)
-        return ''
+    @details_route('DELETE', 'redemptions/([^/ ]+)')
+    def delete_coupon_redemption(self, account_code, uuid, format=BaseRecurlyEndpoint.XML):
+        try:
+            coupon_redemptions_backend.delete_object(uuid)
+            return ''
+        except KeyError:
+            raise ResponseError(404, '')
 
 
 class TransactionsEndpoint(BaseRecurlyEndpoint):
@@ -658,7 +677,6 @@ class CouponsEndpoint(BaseRecurlyEndpoint):
 
     def serialize_coupon_redemption(self, obj, format=BaseRecurlyEndpoint.XML):
         if format == BaseRecurlyEndpoint.RAW:
-            obj = self.hydrate_coupon_redemption_foreign_keys(obj)
             return obj
 
         if type(obj) == list:
@@ -679,9 +697,11 @@ class CouponsEndpoint(BaseRecurlyEndpoint):
     @details_route('POST', 'redeem')
     def redeem_coupon(self, pk, redeem_info, format=BaseRecurlyEndpoint.XML):
         assert CouponsEndpoint.backend.has_object(pk)
+        uuid = self.generate_coupon_redemption_uuid(pk, redeem_info['account_code'])
+        redeem_info['uuid'] = uuid
         redeem_info['coupon'] = pk
         redeem_info['created_at'] = current_time().isoformat()
-        return self.serialize_coupon_redemption(coupon_redemptions_backend.add_object(self.generate_coupon_redemption_uuid(pk, redeem_info['account_code']), redeem_info), format=format)
+        return self.serialize_coupon_redemption(coupon_redemptions_backend.add_object(uuid, redeem_info), format=format)
 
     def determine_coupon_discount(self, coupon, charge):
         type = coupon['discount_type']
@@ -917,12 +937,14 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
                         adjustment_infos.append(plan_charge_line_item)
 
                 # now calculate discounts
-                coupon_redemption = accounts_endpoint.get_coupon_redemption(new_sub['account'])
-                if coupon_redemption:
-                    for plan_charge_line_item in adjustment_infos:
-                        discount = coupons_endpoint.determine_coupon_discount(coupon_redemption['coupon'], plan_charge_line_item['unit_amount_in_cents'])
-                        plan_charge_line_item['discount_in_cents'] = discount
-                        total -= plan_charge_line_item['discount_in_cents']
+                coupon_redemption_list = accounts_endpoint.get_coupon_redemptions_list(new_sub['account'])
+                if coupon_redemption_list:
+                    # TODO: refactor
+                    for coupon_redemption in coupon_redemption_list:
+                        for plan_charge_line_item in adjustment_infos:
+                            discount = coupons_endpoint.determine_coupon_discount(coupon_redemption['coupon'], plan_charge_line_item['unit_amount_in_cents'])
+                            plan_charge_line_item['discount_in_cents'] = discount
+                            total -= plan_charge_line_item['discount_in_cents']
 
                 # create a transaction if the subscription is started
                 new_transaction = {}
