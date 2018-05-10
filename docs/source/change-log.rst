@@ -4,6 +4,11 @@
 Change log
 ==========
 
+0.2.3
+-----
+
+- Add support for recurlypy versions up to 2.8.2
+
 0.2.2
 -----
 
