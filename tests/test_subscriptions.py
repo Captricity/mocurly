@@ -2,6 +2,7 @@ import unittest
 import datetime
 import iso8601
 import recurly
+from dateutil.relativedelta import relativedelta
 from recurly.errors import BadRequestError
 
 recurly.API_KEY = 'blah'
@@ -159,6 +160,12 @@ class TestSubscriptions(unittest.TestCase):
 
         # Make sure a new transaction and invoice was created with it
         invoice = new_subscription.invoice()
+        self.assertEqual(
+            invoice.line_items[0].start_date.date(),
+            datetime.datetime.utcnow().date())
+        self.assertEqual(
+            invoice.line_items[0].end_date.date(),
+            (datetime.datetime.utcnow() + relativedelta(months=1)).date())
         transactions = invoice.transactions
         self.assertEqual(len(transactions), 1)
         self.assertEqual(transactions[0].subscription().uuid, new_subscription.uuid)
@@ -183,6 +190,12 @@ class TestSubscriptions(unittest.TestCase):
 
         # Make sure a new transaction and invoice was created with it
         invoice = new_subscription.invoice()
+        self.assertEqual(
+            invoice.line_items[0].start_date.date(),
+            datetime.datetime.utcnow().date())
+        self.assertEqual(
+            invoice.line_items[0].end_date.date(),
+            (datetime.datetime.utcnow() + relativedelta(months=1)).date())
         transactions = invoice.transactions
         self.assertEqual(len(transactions), 1)
         self.assertEqual(transactions[0].subscription().uuid, new_subscription.uuid)

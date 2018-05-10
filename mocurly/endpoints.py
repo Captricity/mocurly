@@ -288,6 +288,8 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
             pseudo_subscription_object = {}
             pseudo_subscription_object[SubscriptionsEndpoint.pk_attr] = obj['subscription']
             uri_out['subscription_uri'] = subscriptions_endpoint.get_object_uri(pseudo_subscription_object)
+        if 'original_transaction' in obj:
+            uri_out['original_transaction_uri'] = transactions_endpoint.get_object_uri(obj['original_transaction'])
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
@@ -305,7 +307,7 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
         create_info['voidable'] = True
         create_info['refundable'] = True
         create_info['created_at'] = current_time().isoformat()
-        create_info['type'] = 'credit_card'
+        create_info['payment_method'] = 'credit_card'
         if 'description' not in create_info:
             create_info['description'] = ''
 
@@ -351,6 +353,12 @@ class TransactionsEndpoint(BaseRecurlyEndpoint):
                                         'description': create_info['description'],
                                         'quantity': 1,
                                         'invoice': new_invoice_id}
+
+        if 'subscription' in create_info:
+            subscription = subscriptions_backend.get_object(create_info['subscription'])
+            transaction_charge_line_item['start_date'] = dateutil.parser.parse(subscription['current_period_started_at'])
+            transaction_charge_line_item['end_date'] = dateutil.parser.parse(subscription['current_period_ends_at'])
+
         transaction_charge_line_item = adjustments_endpoint.create(transaction_charge_line_item, format=BaseRecurlyEndpoint.RAW)
         InvoicesEndpoint.backend.update_object(new_invoice_id, {'line_items': [transaction_charge_line_item]})
 
@@ -388,7 +396,7 @@ class AdjustmentsEndpoint(BaseRecurlyEndpoint):
         return uri_out
 
     def create(self, create_info, format=BaseRecurlyEndpoint.XML):
-        create_info['created_at'] = create_info['start_date'] = current_time().isoformat()
+        create_info['created_at'] = current_time().isoformat()
         if int(create_info['unit_amount_in_cents']) >= 0:
             create_info['type'] = 'charge'
         else:
@@ -478,6 +486,7 @@ class InvoicesEndpoint(BaseRecurlyEndpoint):
         opts = {
             'action': 'refund',
             'refundable': False,
+            'original_transaction': TransactionsEndpoint.backend.get_object(invoice['transactions'][0])
         }
         if 'subscription' in invoice:
             opts['subscription'] = invoice['subscription']
@@ -897,7 +906,9 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
                     'currency': new_sub['currency'],
                     'unit_amount_in_cents': int(new_sub['unit_amount_in_cents']),
                     'description': new_sub['plan']['name'],
-                    'quantity': new_sub['quantity']
+                    'quantity': new_sub['quantity'],
+                    'start_date': self._parse_isoformat(new_sub['current_period_started_at']),
+                    'end_date': self._parse_isoformat(new_sub['current_period_ends_at'])
                 }
                 total += plan_charge_line_item['unit_amount_in_cents']
                 adjustment_infos.append(plan_charge_line_item)
@@ -946,7 +957,7 @@ class SubscriptionsEndpoint(BaseRecurlyEndpoint):
     def terminate_subscription(self, pk, terminate_info, format=format):
         subscription = SubscriptionsEndpoint.backend.get_object(pk)
         # assume base transaction exists
-        transaction = TransactionsEndpoint.backend.list_objects(lambda trans: trans['subscription'] == subscription[SubscriptionsEndpoint.pk_attr])[0]
+        transaction = TransactionsEndpoint.backend.list_objects(lambda trans: trans.get('subscription', None) == subscription[SubscriptionsEndpoint.pk_attr])[0]
         invoice_number = transaction['invoice']
         invoice = InvoicesEndpoint.backend.get_object(invoice_number)
         start = self._parse_isoformat(subscription['current_period_started_at'])
