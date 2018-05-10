@@ -1,5 +1,5 @@
-httpretty
-recurly>=2.2.11
+httpretty>=0.8,<=0.8.10
+recurly>=2.2.23
 jinja2
 six
 pytz
