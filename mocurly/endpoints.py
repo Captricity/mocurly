@@ -671,7 +671,7 @@ class CouponsEndpoint(BaseRecurlyEndpoint):
 
     @details_route('POST', 'redeem')
     def redeem_coupon(self, pk, redeem_info, format=BaseRecurlyEndpoint.XML):
-        assert CouponsEndpoint.backend.has_object(pk)
+        assert CouponsEndpoint.backend.has_object(pk), pk
         redeem_info['coupon'] = pk
         redeem_info['created_at'] = current_time().isoformat()
         redemption_uuid = self.generate_coupon_redemption_uuid(pk, redeem_info['account_code'])
