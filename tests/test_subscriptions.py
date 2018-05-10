@@ -109,7 +109,8 @@ class TestSubscriptions(unittest.TestCase):
 
         self.assertEqual(len(mocurly.backend.plan_add_ons_backend.datastore), 2)
         foo_add_on_backed = mocurly.backend.plan_add_ons_backend.get_object(self.base_backed_plan_data['plan_code'] + '__foo')
-        foo_add_on = filter(lambda add_on: add_on['add_on_code'] == 'foo', self.base_add_on_data)[0]
+        add_ons = filter(lambda add_on: add_on['add_on_code'] == 'foo', self.base_add_on_data)
+        foo_add_on = list(add_ons)[0]
         for k, v in foo_add_on.items():
             if k == 'unit_amount_in_cents':
                 self.assertEqual(foo_add_on_backed[k], dict((curr, str(amt)) for curr, amt in v.currencies.items()))
@@ -117,7 +118,8 @@ class TestSubscriptions(unittest.TestCase):
                 self.assertEqual(foo_add_on_backed[k], v)
 
         bar_add_on_backed = mocurly.backend.plan_add_ons_backend.get_object(self.base_backed_plan_data['plan_code'] + '__bar')
-        bar_add_on = filter(lambda add_on: add_on['add_on_code'] == 'bar', self.base_add_on_data)[0]
+        add_ons = filter(lambda add_on: add_on['add_on_code'] == 'bar', self.base_add_on_data)
+        bar_add_on = list(add_ons)[0]
         for k, v in bar_add_on.items():
             if k == 'unit_amount_in_cents':
                 self.assertEqual(bar_add_on_backed[k], dict((curr, str(amt)) for curr, amt in v.currencies.items()))
@@ -320,8 +322,10 @@ class TestSubscriptions(unittest.TestCase):
         # get the original transaction and invoice objects for use later
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
         self.assertEqual(len(mocurly.backend.invoices_backend.datastore), 1)
-        original_transaction_id = mocurly.backend.transactions_backend.datastore.keys()[0]
-        original_invoice_id = mocurly.backend.invoices_backend.datastore.keys()[0]
+        transaction_keys = list(mocurly.backend.transactions_backend.datastore.keys())
+        invoice_keys = list(mocurly.backend.invoices_backend.datastore.keys())
+        original_transaction_id = transaction_keys[0]
+        original_invoice_id = invoice_keys[0]
 
         # Now terminate it with a partial refund
         new_subscription.terminate(refund='partial')

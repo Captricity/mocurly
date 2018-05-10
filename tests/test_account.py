@@ -1,7 +1,7 @@
 import unittest
 import datetime
 import operator
-import iso8601
+import pytz
 import recurly
 recurly.API_KEY = 'blah'
 
@@ -106,7 +106,7 @@ class TestAccount(unittest.TestCase):
             if k in ['uuid', 'uris']:
                 continue # skip
             if k == 'created_at':
-                self.assertEqual(getattr(account, k), datetime.datetime(2014, 8, 11, 0, 0, tzinfo=iso8601.iso8601.Utc()))
+                self.assertEqual(getattr(account, k), datetime.datetime(2014, 8, 11, 0, 0, tzinfo=pytz.utc))
             else:
                 self.assertEqual(getattr(account, k), v)
 
@@ -168,7 +168,7 @@ class TestAccount(unittest.TestCase):
             if k in ['uuid', 'uris']:
                 continue # skip
             if k == 'created_at':
-                self.assertEqual(getattr(account, k), datetime.datetime(2014, 8, 11, 0, 0, tzinfo=iso8601.iso8601.Utc()))
+                self.assertEqual(getattr(account, k), datetime.datetime(2014, 8, 11, 0, 0, tzinfo=pytz.utc))
             elif k == 'address':
                 address = getattr(account, k)
                 self.assertEqual(type(address), recurly.Address)
@@ -189,7 +189,7 @@ class TestAccount(unittest.TestCase):
             if k in ['uuid', 'uris']:
                 continue # skip
             if k == 'created_at':
-                self.assertEqual(getattr(account, k), datetime.datetime(2014, 8, 11, 0, 0, tzinfo=iso8601.iso8601.Utc()))
+                self.assertEqual(getattr(account, k), datetime.datetime(2014, 8, 11, 0, 0, tzinfo=pytz.utc))
             else:
                 self.assertEqual(getattr(account, k), v)
 

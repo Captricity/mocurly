@@ -92,7 +92,7 @@ class TestTransaction(unittest.TestCase):
         try:
             new_transaction.save()
             self.fail('No exception raised')
-        except recurly.ValidationError, exc:
+        except recurly.ValidationError as exc:
             self.assertEqual(exc.error, mocurly.errors.TRANSACTION_ERRORS[mocurly.errors.TRANSACTION_DECLINED]['customer'])
 
         self.assertEqual(len(mocurly.backend.transactions_backend.datastore), 1)
