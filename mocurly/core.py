@@ -7,7 +7,7 @@ import recurly
 import re
 import ssl
 import functools
-from six.moves.urllib.parse import urlparse, parse_qs
+from six.moves.urllib.parse import urlparse, parse_qs, unquote
 from httpretty import HTTPretty
 
 from .utils import deserialize
@@ -152,45 +152,80 @@ class mocurly(object):
         for endpoint in endpoints:
             # register list views
             list_uri = recurly.base_uri() + endpoint.base_uri
+            list_uri_re = re.compile(list_uri + r'$')
 
             def list_callback(request, uri, headers, endpoint=endpoint):
                 xml, item_count = endpoint.list()
                 headers['X-Records'] = item_count
                 return 200, headers, xml
-            HTTPretty.register_uri(HTTPretty.GET, list_uri, body=_callback(self)(list_callback), content_type="application/xml")
+            HTTPretty.register_uri(
+                HTTPretty.GET,
+                list_uri_re,
+                body=_callback(self)(list_callback),
+                content_type="application/xml")
 
             def create_callback(request, uri, headers, endpoint=endpoint):
                 return 200, headers, endpoint.create(deserialize(request.body)[1])
-            HTTPretty.register_uri(HTTPretty.POST, list_uri, body=_callback(self)(create_callback), content_type="application/xml")
+            HTTPretty.register_uri(
+                HTTPretty.POST,
+                list_uri_re,
+                body=_callback(self)(create_callback),
+                content_type="application/xml")
 
             # register details views
             detail_uri = recurly.base_uri() + endpoint.base_uri + r'/([^/ ]+)'
             detail_uri_re = re.compile(detail_uri + r'$')
 
             def retrieve_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-                pk = detail_uri_re.match(uri).group(1)
+                raw_pk = detail_uri_re.match(uri).group(1)
+                pk = unquote(raw_pk)
                 return 200, headers, endpoint.retrieve(pk)
-            HTTPretty.register_uri(HTTPretty.GET, detail_uri_re, body=_callback(self)(retrieve_callback), content_type="application/xml")
+            HTTPretty.register_uri(
+                HTTPretty.GET,
+                detail_uri_re,
+                body=_callback(self)(retrieve_callback),
+                content_type="application/xml")
 
             def update_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
-                pk = detail_uri_re.match(uri).group(1)
+                raw_pk = detail_uri_re.match(uri).group(1)
+                pk = unquote(raw_pk)
                 return 200, headers, endpoint.update(pk, deserialize(request.body)[1])
-            HTTPretty.register_uri(HTTPretty.PUT, detail_uri_re, body=_callback(self)(update_callback), content_type="application/xml")
+            HTTPretty.register_uri(
+                HTTPretty.PUT,
+                detail_uri_re,
+                body=_callback(self)(update_callback),
+                content_type="application/xml")
 
             def delete_callback(request, uri, headers, endpoint=endpoint, detail_uri_re=detail_uri_re):
                 parsed_url = urlparse(uri)
-                pk = detail_uri_re.match('{0}://{1}{2}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)).group(1)
+                url_domain_part = '{0}://{1}{2}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)
+                raw_pk = detail_uri_re.match(url_domain_part).group(1)
+                pk = unquote(raw_pk)
                 endpoint.delete(pk, **parse_qs(parsed_url.query))
                 return 204, headers, ''
-            HTTPretty.register_uri(HTTPretty.DELETE, detail_uri_re, body=_callback(self)(delete_callback))
+            HTTPretty.register_uri(
+                HTTPretty.DELETE,
+                detail_uri_re,
+                body=_callback(self)(delete_callback))
 
             # register extra views
-            for method in filter(lambda method: callable(method) and getattr(method, 'is_route', False), (getattr(endpoint, m) for m in dir(endpoint))):
+            extra_views = filter(
+                lambda method: callable(method) and getattr(method, 'is_route', False),
+                (getattr(endpoint, m)
+                 for m in dir(endpoint)))
+            for method in extra_views:
                 uri = detail_uri + '/' + method.uri
                 uri_re = re.compile(uri)
 
-                def extra_route_callback(request, uri, headers, method=method, uri_re=uri_re):
-                    pk = uri_re.match(uri).group(1)
+                def extra_route_callback(
+                        request,
+                        uri,
+                        headers,
+                        method=method,
+                        uri_re=uri_re):
+                    uri_args = uri_re.match(uri).groups()
+                    uri_args = list(uri_args)
+                    uri_args[0] = unquote(uri_args[0])
                     if method.method == 'DELETE':
                         status = 204
                     else:
@@ -199,13 +234,14 @@ class mocurly(object):
                         post_data = request.querystring.copy()
                         if request.body:
                             post_data.update(deserialize(request.body)[1])
-                        result = method(pk, post_data)
+                        uri_args.append(post_data)
+                        result = method(*uri_args)
                     elif method.is_list:
-                        result = method(pk, filters=request.querystring)
+                        result = method(*uri_args, filters=request.querystring)
                         headers['X-Records'] = result[1]
                         result = result[0]
                     else:
-                        result = method(pk)
+                        result = method(*uri_args)
                     return status, headers, result
                 if method.method == 'DELETE':
                     HTTPretty.register_uri(HTTPretty.DELETE, uri_re, body=_callback(self)(extra_route_callback))

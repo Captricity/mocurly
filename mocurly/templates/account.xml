@@ -4,7 +4,7 @@
         <billing_info href="{{ account.uris.billing_info_uri }}"/>
     {% endif %}
     <invoices href="{{ account.uris.invoices_uri }}"/>
-    <redemption href="{{ account.uris.redemption_uri }}"/>
+    <redemptions href="{{ account.uris.redemption_uri }}"/>
     <subscriptions href="{{ account.uris.subscriptions_uri }}"/>
     <transactions href="{{ account.uris.transactions_uri }}"/>
     <account_code>{{ account.account_code }}</account_code>

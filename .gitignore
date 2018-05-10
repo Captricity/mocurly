@@ -8,6 +8,8 @@ test.py
 */__pycache__/*
 mocurly.egg-info
 *.egg
+*.eggs
 
 # Editor files
 .idea
+.python-version

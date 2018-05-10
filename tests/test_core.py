@@ -142,3 +142,15 @@ class TestCore(unittest.TestCase):
         self.assertEqual(error_object.status_code, 200)
         self.assertEqual(error_object.response_body, 'Body')
         self.assertEqual(str(error_object), '200')
+
+    def test_url_encoding_handling(self):
+        """Tests that mocurly correctly routes urlencoded pks"""
+        self.base_account_data['account_code'] += '+foo'
+
+        @mocurly.mocurly
+        def foo():
+            self.assertFalse(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
+            recurly.Account(**self.base_account_data).save()
+            self.assertTrue(mocurly.backend.accounts_backend.has_object(self.base_account_data['account_code']))
+            self.assertIsNotNone(recurly.Account.get(self.base_account_data['account_code']))
+        foo()
