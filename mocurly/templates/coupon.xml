@@ -8,7 +8,7 @@
         <discount_percent type="integer">{{ coupon.discount_percent }}</discount_percent>
     {% else %}
         <discount_in_cents>
-            {% for currency, value in plan.unit_amount_in_cents.items() %}
+            {% for currency, value in coupon.discount_in_cents.items() %}
                 <{{ currency }} type="integer">{{ value }}</{{ currency }}>
             {% endfor %}
         </discount_in_cents>
