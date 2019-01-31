@@ -23,7 +23,8 @@ class TestAccount(unittest.TestCase):
                 'address1': '123 Jackson St.',
                 'address2': 'Data City',
                 'state': 'CA',
-                'zip': '94105'
+                'zip': '94105',
+                'country': 'USA'
             }
         self.base_billing_info_data = {
                 'first_name': 'Foo',
