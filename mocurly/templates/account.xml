@@ -72,7 +72,7 @@
                 <zip nil="nil"></zip>
             {% endif %}
             {% if account.address.country %}
-                <country>{{ account.addresscountry }}</country>
+                <country>{{ account.address.country }}</country>
             {% else %}
                 <country nil="nil"></country>
             {% endif %}
